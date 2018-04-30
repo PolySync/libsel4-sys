@@ -75,3 +75,15 @@ fn eh_personality() {
         core::intrinsics::abort();
     }
 }
+
+#[lang = "oom"]
+pub extern "C" fn oom() -> ! {
+    use core::fmt::Write;
+    let _ = write!(
+        sel4_sys::DebugOutHandle,
+        "----- aborting from out-of-memory -----\n"
+    );
+    unsafe {
+        core::intrinsics::abort();
+    }
+}
