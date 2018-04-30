@@ -1,0 +1,36 @@
+[fel4]
+artifact-path = "images"
+target-specs-path = "targets"
+default-target = "x86_64-sel4-helios"
+
+[sel4-cmake-options]
+# TODO - debug/release
+KernelDebugBuild = true
+KernelPrinting = true
+KernelOptimisation = "-02"
+# normal things
+KernelVerificationBuild = false
+KernelBenchmarks = "none"
+KernelDangerousCodeInjection = false
+KernelFastpath = true
+KernelMaxNumNodes = 1
+KernelRetypeFanOutLimit = 256
+KernelNumDomains = 1
+KernelMaxNumBootinfoUntypedCaps = 230
+KernelRootCNodeSizeBits = 19
+LibSel4FunctionAttributes = "public"
+KernelSupportPCID = false
+# libs/utils/etc
+SIMULATION = true
+
+[sel4-cmake-options.x86_64-sel4-helios]
+KernelArch = "x86"
+KernelX86Sel4Arch = "x86_64"
+KernelPlatPC99 = true
+
+[sel4-cmake-options.arm-sel4-helios]
+CROSS_COMPILER_PREFIX = "arm-linux-gnueabihf-"
+KernelArch = "arm"
+KernelArmSel4Arch = "aarch32"
+KernelARMPlatform = "sabre"
+KernelPlatformSabre = true
