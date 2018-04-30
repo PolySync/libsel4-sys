@@ -1,3 +1,5 @@
+/target
+**/*.rs.bk
 test_data/sel4_config.rs
 test_data/test_config.rs
 Cargo.lock

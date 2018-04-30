@@ -1,0 +1,11 @@
+[package]
+name = "static-heap"
+version = "0.0.1"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+
+[build-dependencies]
