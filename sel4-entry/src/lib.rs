@@ -77,7 +77,7 @@ fn eh_personality() {
 }
 
 #[lang = "oom"]
-pub extern "C" fn oom() -> ! {
+extern "C" fn oom() -> ! {
     use core::fmt::Write;
     let _ = write!(
         sel4_sys::DebugOutHandle,
