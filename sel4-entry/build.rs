@@ -22,7 +22,7 @@ fn main() {
                     "-target",
                     llvmtriple,
                     "-o",
-                    &*format!("{}/{}.o", out_dir, arch)
+                    &*format!("{}/{}.o", out_dir, arch),
                 ])
                 .status()
                 .unwrap()
