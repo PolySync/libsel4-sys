@@ -1,0 +1,15 @@
+[submodule "libsel4-sys/deps/musllibc"]
+	path = libsel4-sys/deps/musllibc
+	url = https://github.com/seL4/musllibc.git
+[submodule "libsel4-sys/deps/seL4_kernel"]
+	path = libsel4-sys/deps/seL4_kernel
+	url = https://github.com/seL4/seL4.git
+[submodule "libsel4-sys/deps/seL4_libs"]
+	path = libsel4-sys/deps/seL4_libs
+	url = https://github.com/seL4/seL4_libs.git
+[submodule "libsel4-sys/deps/seL4_tools"]
+	path = libsel4-sys/deps/seL4_tools
+	url = https://github.com/seL4/seL4_tools.git
+[submodule "libsel4-sys/deps/util_libs"]
+	path = libsel4-sys/deps/util_libs
+	url = https://github.com/seL4/util_libs.git
