@@ -4,11 +4,7 @@ target-specs-path = "targets"
 default-target = "x86_64-sel4-helios"
 
 [sel4-cmake-options]
-# TODO - debug/release
-KernelDebugBuild = true
-KernelPrinting = true
 KernelOptimisation = "-02"
-# normal things
 KernelVerificationBuild = false
 KernelBenchmarks = "none"
 KernelDangerousCodeInjection = false
@@ -22,6 +18,14 @@ LibSel4FunctionAttributes = "public"
 KernelSupportPCID = false
 # libs/utils/etc
 SIMULATION = true
+
+[sel4-cmake-options.debug]
+KernelDebugBuild = true
+KernelPrinting = true
+
+[sel4-cmake-options.release]
+KernelDebugBuild = false
+KernelPrinting = false
 
 [sel4-cmake-options.x86_64-sel4-helios]
 KernelArch = "x86"

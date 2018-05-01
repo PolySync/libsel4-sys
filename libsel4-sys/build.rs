@@ -266,6 +266,12 @@ fn configure_cmake_build(config: &mut Config) -> (String, String) {
 
     config.define("KERNEL_PATH", kernel_path);
 
+    add_cmake_build_type_options(
+        &getenv_unwrap("PROFILE"),
+        &cmake_options,
+        config,
+    );
+
     // add options inferred from target specification
     let platform = add_cmake_target_options(&target, &cmake_options, config);
 
@@ -292,6 +298,36 @@ fn configure_cmake_build(config: &mut Config) -> (String, String) {
     (target, platform)
 }
 
+/// Add build type (debug/release) specific CMake configurations.
+fn add_cmake_build_type_options(
+    build_type: &String,
+    options: &toml::Value,
+    config: &mut Config,
+) {
+    let build_type_table = match options.get(&build_type) {
+        Some(btt) => match btt {
+            Value::Table(h) => h,
+            _ => fail(&format!(
+                "build type '{}' section is malformed",
+                &build_type
+            )),
+        },
+        None => fail(&format!(
+            "build type '{}' section is missing",
+            &build_type
+        )),
+    };
+
+    for (key, value) in build_type_table {
+        // ignore other tables within this one
+        if value.is_table() {
+            continue;
+        }
+
+        add_cmake_definition(key, value, config);
+    }
+}
+
 /// Add target specific CMake configurations.
 ///
 /// Returns platform String.
@@ -301,7 +337,7 @@ fn add_cmake_target_options(
     config: &mut Config,
 ) -> String {
     let target_table = match options.get(&target) {
-        Some(ht) => match ht {
+        Some(tt) => match tt {
             Value::Table(h) => h,
             _ => fail(&format!(
                 "target '{}' section is malformed",
