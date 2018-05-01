@@ -246,10 +246,7 @@ fn configure_cmake_build(config: &mut Config) -> (String, String) {
 
     let kernel_path = root_path.join("deps").join("seL4_kernel");
 
-    let fel4_manifest = match env::var("FEL4_MANIFEST_PATH") {
-        Ok(v) => PathBuf::from(v),
-        Err(_) => root_path.join("fel4.toml"),
-    };
+    let fel4_manifest = PathBuf::from(getenv_unwrap("FEL4_MANIFEST_PATH"));
 
     println!(
         "cargo:rerun-if-changed={}",
