@@ -1,4 +1,4 @@
-//! This is the build script for the `libsel4-sys` pacakge.
+//! This is the build script for the `libsel4-sys` package.
 //!
 //! It builds both the kernel binary and libsel4.a C bindings.
 //!
