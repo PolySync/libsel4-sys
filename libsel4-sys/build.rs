@@ -8,7 +8,7 @@ use cmake::Config;
 use package_config::process_cmake_cache;
 use std::env;
 use std::fs::File;
-use std::fs::{copy, create_dir};
+use std::fs::{copy, create_dir, remove_file};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use toml::Value;
@@ -17,6 +17,17 @@ fn main() {
     let mut config = Config::new(".");
 
     configure_cmake_build(&mut config);
+
+    // delete any existing CMakeCache.txt to prevent seL4/CMake from
+    // unexpected reconfigurations
+    let prev_cache_path = PathBuf::from(getenv_unwrap("OUT_DIR"))
+        .join("build")
+        .join("CMakeCache.txt");
+
+    if prev_cache_path.exists() {
+        remove_file(prev_cache_path)
+            .expect("failed to delete previous CMakeCache.txt file");
+    }
 
     let cargo_output_path = config.build();
 
