@@ -13,7 +13,7 @@ use cmake::Config;
 use package_config::process_cmake_cache;
 use std::env;
 use std::fs::File;
-use std::fs::{copy, create_dir};
+use std::fs::{copy, create_dir, remove_file};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use toml::Value;
@@ -22,6 +22,17 @@ fn main() {
     let mut config = Config::new(".");
 
     let (target, platform) = configure_cmake_build(&mut config);
+
+    // delete any existing CMakeCache.txt to prevent seL4/CMake from
+    // unexpected reconfigurations
+    let prev_cache_path = PathBuf::from(getenv_unwrap("OUT_DIR"))
+        .join("build")
+        .join("CMakeCache.txt");
+
+    if prev_cache_path.exists() {
+        remove_file(prev_cache_path)
+            .expect("failed to delete previous CMakeCache.txt file");
+    }
 
     let cargo_output_path = config.build();
 
@@ -48,7 +59,7 @@ fn main() {
     print_cargo_rerun_if_flags();
 
     // copy artifacts if environment variable is set
-    let dest_env = env::var("HELIOS_ARTIFACT_PATH");
+    let dest_env = env::var("FEL4_ARTIFACT_PATH");
     match dest_env {
         Ok(p) => copy_artifacts(cargo_output_path.clone(), PathBuf::from(p)),
         Err(_) => (),
@@ -107,8 +118,8 @@ fn print_cargo_links_keys(cargo_output_path: PathBuf) {
 /// Print common environment rerun-if's.
 fn print_cargo_rerun_if_flags() {
     println!("cargo:rerun-if-env-changed=OUT_DIR");
-    println!("cargo:rerun-if-env-changed=HELIOS_MANIFEST_PATH");
-    println!("cargo:rerun-if-env-changed=HELIOS_ARTIFACT_PATH");
+    println!("cargo:rerun-if-env-changed=FEL4_MANIFEST_PATH");
+    println!("cargo:rerun-if-env-changed=FEL4_ARTIFACT_PATH");
     println!("cargo:rerun-if-changed=package");
     println!("cargo:rerun-if-changed=package/CMakeLists.txt");
 }
@@ -235,17 +246,17 @@ fn configure_cmake_build(config: &mut Config) -> (String, String) {
 
     let kernel_path = root_path.join("deps").join("seL4_kernel");
 
-    let helios_manifest = match env::var("HELIOS_MANIFEST_PATH") {
+    let fel4_manifest = match env::var("FEL4_MANIFEST_PATH") {
         Ok(v) => PathBuf::from(v),
-        Err(_) => root_path.join("Cargo.toml"),
+        Err(_) => root_path.join("fel4.toml"),
     };
 
     println!(
         "cargo:rerun-if-changed={}",
-        helios_manifest.display()
+        fel4_manifest.display()
     );
 
-    let cmake_options = get_cmake_options_table(helios_manifest);
+    let cmake_options = get_cmake_options_table(fel4_manifest);
 
     // CMAKE_TOOLCHAIN_FILE is resolved immediately by CMake
     config.define(
@@ -377,37 +388,10 @@ fn get_cmake_options_table(path: PathBuf) -> toml::Value {
         .unwrap();
 
     let manifest = contents.parse::<toml::Value>().unwrap();
-
-    let package_table = match &manifest {
-        Value::Table(t) => match t.get("package") {
-            Some(ht) => match ht {
-                Value::Table(h) => h,
-                _ => fail("package section is malformed"),
-            },
-            None => manifest
-                .as_table()
-                .expect("manifest is malformed"),
-        },
-        _ => fail("manifest is malformed"),
-    };
-
-    let metadata_table = match package_table.get("metadata") {
-        Some(ht) => match ht {
-            Value::Table(h) => h,
-            _ => fail("metadata section is malformed"),
-        },
-        None => fail("missing metadata section"),
-    };
-
-    let cmake_table = match metadata_table.get("sel4-cmake-options") {
-        Some(ht) => match ht {
-            Value::Table(h) => h,
-            _ => fail("sel4-cmake-options section is malformed"),
-        },
-        None => fail("missing sel4-cmake-options section"),
-    };
-
-    toml::Value::try_from(cmake_table).unwrap()
+    match manifest.get("sel4-cmake-options") {
+        Some(t) => t.clone(),
+        None => panic!("missing sel4-cmake-options"),
+    }
 }
 
 /// Return an environment variable as a String.
