@@ -1,4 +1,0 @@
-[target.x86_64-sel4-helios.dependencies]
-alloc = {}
-[target.arm-sel4-helios.dependencies]
-alloc = {}
