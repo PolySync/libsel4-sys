@@ -1,3 +1,8 @@
+//! This is the build script for the `libsel4-sys` package.
+//!
+//! It builds both the kernel binary and libsel4.a C bindings.
+//!
+
 extern crate bindgen;
 extern crate cmake;
 extern crate package_config;
@@ -16,7 +21,7 @@ use toml::Value;
 fn main() {
     let mut config = Config::new(".");
 
-    configure_cmake_build(&mut config);
+    let (target, platform) = configure_cmake_build(&mut config);
 
     // delete any existing CMakeCache.txt to prevent seL4/CMake from
     // unexpected reconfigurations
@@ -41,7 +46,11 @@ fn main() {
         PathBuf::from(getenv_unwrap("OUT_DIR")),
     );
 
-    generate_bindings(cargo_output_path.join("build").join("staging"));
+    generate_bindings(
+        &target,
+        &platform,
+        cargo_output_path.join("build").join("staging"),
+    );
 
     // links = "sel4", these non-cargo variables can be read by consumer
     // packages
@@ -73,6 +82,12 @@ fn main() {
     println!("cargo:rustc-link-lib=static=sel4");
 }
 
+/// Print common links keys used by consumer packages.
+///
+/// You can access these as environment variables:
+/// - `DEP_SEL4_CMAKE_CACHE_PATH`
+/// - `DEP_KERNEL_PATH`
+/// - `DEP_SIMULATION_SCRIPT_PATH`
 fn print_cargo_links_keys(cargo_output_path: PathBuf) {
     println!(
         "cargo:cmake_cache_path={}",
@@ -100,6 +115,7 @@ fn print_cargo_links_keys(cargo_output_path: PathBuf) {
     );
 }
 
+/// Print common environment rerun-if's.
 fn print_cargo_rerun_if_flags() {
     println!("cargo:rerun-if-env-changed=OUT_DIR");
     println!("cargo:rerun-if-env-changed=HELIOS_MANIFEST_PATH");
@@ -108,6 +124,8 @@ fn print_cargo_rerun_if_flags() {
     println!("cargo:rerun-if-changed=package/CMakeLists.txt");
 }
 
+/// Copy build external build artifacts (kernel/simulation-script) into the
+/// artifact directory.
 fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
     if !output_path.exists() {
         create_dir(&output_path).unwrap();
@@ -136,23 +154,31 @@ fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
     );
 }
 
-fn generate_bindings(include_path: PathBuf) {
-    let target = getenv_unwrap("TARGET");
-
+/// Generate the libsel4 Rust bindings.
+fn generate_bindings(
+    target: &String,
+    platform: &String,
+    include_path: PathBuf,
+) {
     let (kernel_arch, sel4_arch, width, plat) =
-        get_bindgen_target_include_dirs(&target);
+        get_bindgen_target_include_dirs(target, platform);
+
+    let target_args = match target.as_ref() {
+        "arm-sel4-helios" => String::from("-mfloat-abi=hard"),
+        _ => String::from(""),
+    };
 
     let bindings = Builder::default()
         .header("res/bindgen_wrapper.h")
         .whitelist_recursively(true)
         .no_copy("*")
         .use_core()
+        // our custom c_types
         .ctypes_prefix("c_types")
-        // we implement these
+        // TODO - verify that we should be implementing these in src/lib.rs
         .blacklist_type("strcpy")
         .blacklist_type("__assert_fail")
-        // TODO - do we need this level of configuration?
-        //.clang_arg("-mfloat-abi=hard")
+        .clang_arg(target_args)
         .clang_arg(format!("-I{}", include_path.join("include").display()))
         .clang_arg(format!("-I{}", include_path.join(kernel_arch).display()))
         .clang_arg(format!("-I{}", include_path.join(sel4_arch).display()))
@@ -171,37 +197,49 @@ fn generate_bindings(include_path: PathBuf) {
         .expect("failed to write bindings to file");
 }
 
-/// returns kernel_arch, kernel_sel4_arch, width, platform
+/// Parses the target triple and platform to produce
+/// a bindgen compatable include
+/// token Strings (kernel_arch, kernel_sel4_arch, width, platform).
 fn get_bindgen_target_include_dirs(
     target: &String,
+    platform: &String,
 ) -> (String, String, String, String) {
     if target == "x86_64-sel4-helios" {
         (
             "x86".to_string(),
             "x86_64".to_string(),
             "64".to_string(),
-            "pc99".to_string(),
+            platform.to_string(),
         )
     } else if target == "arm-sel4-helios" {
-        // TODO
-        fail(&format!(
-            "target '{}' has platform hard coded",
-            target
-        ));
-    /*
+        // some platform names don't map one-to-one
+        let plat_include = match platform.as_str() {
+            "sabre" => "imx6",
+            "exynos5410" => "exynos5",
+            "exynos5422" => "exynos5",
+            "exynos5250" => "exynos5",
+            "imx7sabre" => "imx7",
+            "rpi3" => "bcm2837",
+            p => p,
+        };
+
         (
             "arm".to_string(),
             "aarch32".to_string(),
             "32".to_string(),
-            "imx6".to_string(),
+            plat_include.to_string(),
         )
-        */
     } else {
         fail(&format!("unsupported target '{}'", target))
     }
 }
 
-fn configure_cmake_build(config: &mut Config) {
+/// Configure a CMake build configuration from toml.
+///
+/// Returns (target-triple, platform).
+fn configure_cmake_build(config: &mut Config) -> (String, String) {
+    let target = getenv_unwrap("TARGET");
+
     let root_dir = getenv_unwrap("CARGO_MANIFEST_DIR");
 
     let root_path = Path::new(&root_dir);
@@ -229,7 +267,7 @@ fn configure_cmake_build(config: &mut Config) {
     config.define("KERNEL_PATH", kernel_path);
 
     // add options inferred from target specification
-    add_cmake_target_options(&cmake_options, config);
+    let platform = add_cmake_target_options(&target, &cmake_options, config);
 
     // seL4 handles these so we clear them to prevent cmake-rs from
     // auto-populating
@@ -250,11 +288,18 @@ fn configure_cmake_build(config: &mut Config) {
 
     // Ninja generator
     config.generator("Ninja");
+
+    (target, platform)
 }
 
-fn add_cmake_target_options(options: &toml::Value, config: &mut Config) {
-    let target = getenv_unwrap("TARGET");
-
+/// Add target specific CMake configurations.
+///
+/// Returns platform String.
+fn add_cmake_target_options(
+    target: &String,
+    options: &toml::Value,
+    config: &mut Config,
+) -> String {
     let target_table = match options.get(&target) {
         Some(ht) => match ht {
             Value::Table(h) => h,
@@ -269,16 +314,31 @@ fn add_cmake_target_options(options: &toml::Value, config: &mut Config) {
         )),
     };
 
+    // the default is pc99, the only platform for x86/x86_64
+    let mut platform = String::from("pc99");
+
     for (key, value) in target_table {
         // ignore other tables within this one
         if value.is_table() {
             continue;
         }
 
+        if target == "arm-sel4-helios" {
+            if key == "KernelARMPlatform" {
+                platform = value
+                    .as_str()
+                    .expect("failed to extract KernelARMPlatform value")
+                    .to_string();
+            }
+        }
+
         add_cmake_definition(key, value, config);
     }
+
+    platform
 }
 
+/// Add a CMake configuration definition
 fn add_cmake_definition(
     key: &String,
     value: &toml::Value,
@@ -314,6 +374,7 @@ fn add_cmake_definition(
     }
 }
 
+/// Return the CMake options table from toml file.
 fn get_cmake_options_table(path: PathBuf) -> toml::Value {
     let mut manifest_file = File::open(&path).expect(&format!(
         "failed to open manifest file {}",
@@ -360,6 +421,7 @@ fn get_cmake_options_table(path: PathBuf) -> toml::Value {
     toml::Value::try_from(cmake_table).unwrap()
 }
 
+/// Return an environment variable as a String.
 fn getenv_unwrap(v: &str) -> String {
     match env::var(v) {
         Ok(s) => s,
@@ -370,6 +432,7 @@ fn getenv_unwrap(v: &str) -> String {
     }
 }
 
+/// Failure with panic.
 fn fail(s: &str) -> ! {
     panic!("\n{}\n\nbuild script failed", s)
 }
