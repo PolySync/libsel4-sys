@@ -16,8 +16,7 @@ KernelMaxNumBootinfoUntypedCaps = 230
 KernelRootCNodeSizeBits = 19
 LibSel4FunctionAttributes = "public"
 KernelSupportPCID = false
-# libs/utils/etc
-SIMULATION = true
+BuildWithCommonSimulationSettings = true
 
 [sel4-cmake-options.debug]
 KernelDebugBuild = true

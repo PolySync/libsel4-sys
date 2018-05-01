@@ -6,7 +6,11 @@ cmake_minimum_required(VERSION 3.7.2)
 #project(sel4_package C)
 project(sel4_package NONE)
 
-set(SIMULATION OFF CACHE BOOL "Include only simulation compatible configurations")
+set(
+    BuildWithCommonSimulationSettings
+    OFF
+    CACHE BOOL
+    "Include only simulation compatible configurations")
 
 set(rootservername sel4_package)
 
@@ -14,10 +18,10 @@ add_library(sel4_package ALIAS sel4)
 
 ApplyData61ElfLoaderSettings()
 
-if(SIMULATION)
+if(BuildWithCommonSimulationSettings)
     ApplyCommonSimulationSettings()
     GenerateSimulateScript()
-endif(SIMULATION)
+endif(BuildWithCommonSimulationSettings)
 
 # TODO - remove override
 ApplyCommonReleaseVerificationSettings(OFF OFF)
