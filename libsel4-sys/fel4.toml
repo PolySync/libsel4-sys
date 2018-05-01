@@ -26,11 +26,9 @@ SIMULATION = true
 [sel4-cmake-options.x86_64-sel4-helios]
 KernelArch = "x86"
 KernelX86Sel4Arch = "x86_64"
-KernelPlatPC99 = true
 
 [sel4-cmake-options.arm-sel4-helios]
 CROSS_COMPILER_PREFIX = "arm-linux-gnueabihf-"
 KernelArch = "arm"
 KernelArmSel4Arch = "aarch32"
 KernelARMPlatform = "sabre"
-KernelPlatformSabre = true

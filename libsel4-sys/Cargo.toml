@@ -17,33 +17,3 @@ cmake = "0.1"
 toml = "0.4"
 bindgen = "0.35"
 package-config = {path = "../package-config"}
-
-[package.metadata.sel4-cmake-options]
-# TODO - debug/release
-KernelDebugBuild = true
-KernelPrinting = true
-KernelOptimisation = "-02"
-# normal things
-KernelVerificationBuild = false
-KernelBenchmarks = "none"
-KernelDangerousCodeInjection = false
-KernelFastpath = true
-KernelMaxNumNodes = 1
-KernelRetypeFanOutLimit = 256
-KernelNumDomains = 1
-KernelMaxNumBootinfoUntypedCaps = 230
-KernelRootCNodeSizeBits = 19
-LibSel4FunctionAttributes = "public"
-KernelSupportPCID = false
-# libs/utils/etc
-SIMULATION = true
-
-[package.metadata.sel4-cmake-options.x86_64-sel4-helios]
-KernelArch = "x86"
-KernelX86Sel4Arch = "x86_64"
-
-[package.metadata.sel4-cmake-options.arm-sel4-helios]
-CROSS_COMPILER_PREFIX = "arm-linux-gnueabihf-"
-KernelArch = "arm"
-KernelArmSel4Arch = "aarch32"
-KernelARMPlatform = "sabre"
