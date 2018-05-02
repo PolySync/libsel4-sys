@@ -163,9 +163,10 @@ fn generate_bindings(
     let (kernel_arch, sel4_arch, width, plat) =
         get_bindgen_target_include_dirs(target, platform);
 
-    let target_args = match target.as_ref() {
-        "arm-sel4-helios" => String::from("-mfloat-abi=hard"),
-        _ => String::from(""),
+    let target_args = if target == "arm-sel4-helios" {
+        String::from("-mfloat-abi=hard")
+    } else {
+        String::from("")
     };
 
     let bindings = Builder::default()
@@ -323,13 +324,11 @@ fn add_cmake_target_options(
             continue;
         }
 
-        if target == "arm-sel4-helios" {
-            if key == "KernelARMPlatform" {
-                platform = value
-                    .as_str()
-                    .expect("failed to extract KernelARMPlatform value")
-                    .to_string();
-            }
+        if target == "arm-sel4-helios" && key == "KernelARMPlatform" {
+            platform = value
+                .as_str()
+                .expect("failed to extract KernelARMPlatform value")
+                .to_string();
         }
 
         add_cmake_definition(key, value, config);
