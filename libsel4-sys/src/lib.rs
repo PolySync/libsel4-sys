@@ -72,4 +72,7 @@ pub unsafe extern "C" fn strcpy(
     dest
 }
 
+#[cfg(target = "arm-sel4-helios")]
+pub const seL4_WordBits: u32 = 32;
+
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
