@@ -43,11 +43,11 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", out_dir);
 
     let target = env::var("TARGET").unwrap();
-    if target == "i686-sel4-helios" {
+    if target == "i686-sel4-fel4" {
         println!("cargo:rustc-link-lib=static=x86");
-    } else if target == "x86_64-sel4-helios" {
+    } else if target == "x86_64-sel4-fel4" {
         println!("cargo:rustc-link-lib=static=x86_64");
-    } else if target == "arm-sel4-helios" {
+    } else if target == "arm-sel4-fel4" {
         println!("cargo:rustc-link-lib=static=arm");
     }
 }

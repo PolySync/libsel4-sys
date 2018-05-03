@@ -39,12 +39,17 @@ Down-stream consumers can specify a toml file that contains the CMake configurat
 tables via the `HELIOS_MANIFEST_PATH` variable. If not set, the default package configuration
 will be used.
 
-## CMake Build Configuration
+## Build Configuration
+
+Example `fel4.toml`:
 
 ```
-[package.metadata.sel4-cmake-options]
-KernelDebugBuild = true
-KernelPrinting = true
+[fel4]
+artifact-path = "images"
+target-specs-path = "targets"
+default-target = "x86_64-sel4-fel4"
+
+[sel4-cmake-options]
 KernelOptimisation = "-02"
 KernelVerificationBuild = false
 KernelBenchmarks = "none"
@@ -57,17 +62,23 @@ KernelMaxNumBootinfoUntypedCaps = 230
 KernelRootCNodeSizeBits = 19
 LibSel4FunctionAttributes = "public"
 KernelSupportPCID = false
-SIMULATION = true
+BuildWithCommonSimulationSettings = true
 
-[package.metadata.sel4-cmake-options.x86_64-sel4-helios]
+[sel4-cmake-options.debug]
+KernelDebugBuild = true
+KernelPrinting = true
+
+[sel4-cmake-options.release]
+KernelDebugBuild = false
+KernelPrinting = false
+
+[sel4-cmake-options.x86_64-sel4-fel4]
 KernelArch = "x86"
 KernelX86Sel4Arch = "x86_64"
-KernelPlatPC99 = true
 
-[package.metadata.sel4-cmake-options.arm-sel4-helios]
+[sel4-cmake-options.arm-sel4-fel4]
 CROSS_COMPILER_PREFIX = "arm-linux-gnueabihf-"
 KernelArch = "arm"
 KernelArmSel4Arch = "aarch32"
 KernelARMPlatform = "sabre"
-KernelPlatformSabre = true
 ```

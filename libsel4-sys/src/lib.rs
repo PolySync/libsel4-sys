@@ -72,7 +72,7 @@ pub unsafe extern "C" fn strcpy(
     dest
 }
 
-#[cfg(all(target_arch = "arm", target_os = "sel4", target_env = "helios"))]
+#[cfg(all(target_arch = "arm", target_os = "sel4", target_env = "fel4"))]
 /// Number of bits in a `seL4_Word`.
 ///
 /// # Remarks
@@ -82,7 +82,7 @@ pub unsafe extern "C" fn strcpy(
 /// #define seL4_WordBits (sizeof(seL4_Word) * 8)
 /// ```
 ///
-/// For our `arm-sel4-helios` target see file:
+/// For our `arm-sel4-fel4` target see file:
 /// `libsel4/sel4_arch_include/aarch32/sel4/sel4_arch/constants.h`
 ///
 /// However due to bindgen not being able to expand functional

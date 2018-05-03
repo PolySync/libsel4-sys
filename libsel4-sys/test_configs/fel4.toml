@@ -1,7 +1,7 @@
 [fel4]
 artifact-path = "images"
 target-specs-path = "targets"
-default-target = "x86_64-sel4-helios"
+default-target = "x86_64-sel4-fel4"
 
 [sel4-cmake-options]
 KernelOptimisation = "-02"
@@ -26,11 +26,11 @@ KernelPrinting = true
 KernelDebugBuild = false
 KernelPrinting = false
 
-[sel4-cmake-options.x86_64-sel4-helios]
+[sel4-cmake-options.x86_64-sel4-fel4]
 KernelArch = "x86"
 KernelX86Sel4Arch = "x86_64"
 
-[sel4-cmake-options.arm-sel4-helios]
+[sel4-cmake-options.arm-sel4-fel4]
 CROSS_COMPILER_PREFIX = "arm-linux-gnueabihf-"
 KernelArch = "arm"
 KernelArmSel4Arch = "aarch32"
