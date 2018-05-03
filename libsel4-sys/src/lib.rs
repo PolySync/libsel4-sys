@@ -72,7 +72,7 @@ pub unsafe extern "C" fn strcpy(
     dest
 }
 
-#[cfg(target = "arm-sel4-helios")]
+#[cfg(all(target_arch = "arm", target_os = "sel4", target_env = "helios"))]
 /// Number of bits in a `seL4_Word`.
 ///
 /// # Remarks
