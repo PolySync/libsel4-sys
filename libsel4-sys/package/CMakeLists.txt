@@ -84,7 +84,7 @@ elseif("${KernelArch}" STREQUAL "arm")
 
     # WARNING - this will likely change as we migrate to a Rust project
     #
-    # This is brittle, and won't complain if the `FEL4_ROOT_TASK_IMAGE` variable is not set.
+    # This is brittle, and won't complain if the `FEL4_ROOT_TASK_IMAGE_PATH` variable is not set.
     #
     # This is intentional and a step in the right direction until we have a
     # fully formed Rust bootstrapping tool.
@@ -92,7 +92,7 @@ elseif("${KernelArch}" STREQUAL "arm")
     # build kernel binary and libsel4.a without having a root-task image.
     # Then on further invocations (assuming environment variable is set) you can
     # have the elfloader-tool pick up the root-task image and link everthing together.
-    set_property(TARGET rootserver_image PROPERTY ROOTSERVER_IMAGE "$ENV{FEL4_ROOT_TASK_IMAGE}")
+    set_property(TARGET rootserver_image PROPERTY ROOTSERVER_IMAGE "$ENV{FEL4_ROOT_TASK_IMAGE_PATH}")
 endif()
 
 # mock what we want to export for the build system, uses relative paths for now
