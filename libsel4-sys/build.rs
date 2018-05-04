@@ -120,6 +120,7 @@ fn print_cargo_rerun_if_flags() {
     println!("cargo:rerun-if-env-changed=OUT_DIR");
     println!("cargo:rerun-if-env-changed=FEL4_MANIFEST_PATH");
     println!("cargo:rerun-if-env-changed=FEL4_ARTIFACT_PATH");
+    println!("cargo:rerun-if-env-changed=FEL4_ROOT_TASK_IMAGE");
     println!("cargo:rerun-if-changed=package");
     println!("cargo:rerun-if-changed=package/CMakeLists.txt");
 }

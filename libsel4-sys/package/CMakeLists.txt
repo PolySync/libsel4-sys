@@ -3,7 +3,6 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
-#project(sel4_package C)
 project(sel4_package NONE)
 
 set(
@@ -82,10 +81,19 @@ elseif("${KernelArch}" STREQUAL "arm")
         "${IMAGE_NAME}"
         elfloader
         ${rootservername})
-endif()
 
-#set_property(TARGET rootserver_image PROPERTY IMAGE_NAME "${IMAGE_NAME}")
-#set_property(TARGET rootserver_image PROPERTY KERNEL_IMAGE_NAME "${KERNEL_IMAGE_NAME}")
+    # WARNING - this will likely change as we migrate to a Rust project
+    #
+    # This is brittle, and won't complain if the `FEL4_ROOT_TASK_IMAGE` variable is not set.
+    #
+    # This is intentional and a step in the right direction until we have a
+    # fully formed Rust bootstrapping tool.
+    # It lets us get away with muli-stage building, where we can first
+    # build kernel binary and libsel4.a without having a root-task image.
+    # Then on further invocations (assuming environment variable is set) you can
+    # have the elfloader-tool pick up the root-task image and link everthing together.
+    set_property(TARGET rootserver_image PROPERTY ROOTSERVER_IMAGE "$ENV{FEL4_ROOT_TASK_IMAGE}")
+endif()
 
 # mock what we want to export for the build system, uses relative paths for now
 set_property(TARGET rootserver_image PROPERTY IMAGE_NAME "images/feL4img")
