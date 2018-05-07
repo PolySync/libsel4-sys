@@ -2,3 +2,5 @@
 alloc = {}
 [target.arm-sel4-fel4.dependencies]
 alloc = {}
+[target.aarch64-sel4-fel4.dependencies]
+alloc = {}
