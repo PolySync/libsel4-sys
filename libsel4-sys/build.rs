@@ -170,11 +170,6 @@ fn generate_bindings(
         String::from("")
     };
 
-    println!(
-        "\n\nplat inc {}\n",
-        include_path.join(plat.clone()).display()
-    );
-
     let bindings = Builder::default()
         .header("res/bindgen_wrapper.h")
         .whitelist_recursively(true)
