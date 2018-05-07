@@ -95,4 +95,7 @@ pub unsafe extern "C" fn strcpy(
 /// - `feL4-dependencies/issues/18`
 pub const seL4_WordBits: u32 = 32;
 
+#[cfg(all(target_arch = "aarch64", target_os = "sel4", target_env = "fel4"))]
+pub const seL4_WordBits: u32 = 64;
+
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
