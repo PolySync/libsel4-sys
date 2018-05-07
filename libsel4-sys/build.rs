@@ -12,8 +12,8 @@ use bindgen::Builder;
 use cmake::Config;
 use package_config::process_cmake_cache;
 use std::env;
+use std::fs;
 use std::fs::File;
-use std::fs::{copy, create_dir, remove_file};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use toml::Value;
@@ -30,7 +30,7 @@ fn main() {
         .join("CMakeCache.txt");
 
     if prev_cache_path.exists() {
-        remove_file(prev_cache_path)
+        fs::remove_file(prev_cache_path)
             .expect("failed to delete previous CMakeCache.txt file");
     }
 
@@ -129,10 +129,10 @@ fn print_cargo_rerun_if_flags() {
 /// artifact directory.
 fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
     if !output_path.exists() {
-        create_dir(&output_path).unwrap();
+        fs::create_dir(&output_path).unwrap();
     }
 
-    copy(
+    fs::copy(
         artifact_path
             .join("build")
             .join("images")
@@ -140,9 +140,16 @@ fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
         output_path.join("kernel"),
     ).unwrap();
 
-    copy(
+    fs::copy(
         artifact_path.join("build").join("simulate"),
         output_path.join("simulate"),
+    ).unwrap();
+
+    fs::copy(
+        artifact_path
+            .join("build")
+            .join("CMakeCache.txt"),
+        output_path.join("CMakeCache.txt"),
     ).unwrap();
 
     println!(
