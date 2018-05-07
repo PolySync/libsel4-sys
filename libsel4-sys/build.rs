@@ -164,11 +164,16 @@ fn generate_bindings(
     let (kernel_arch, sel4_arch, width, plat) =
         get_bindgen_target_include_dirs(target, platform);
 
-    let target_args = if target == "arm-sel4-fel4" {
+    let target_args = if target.contains("arm") {
         String::from("-mfloat-abi=hard")
     } else {
         String::from("")
     };
+
+    println!(
+        "\n\nplat inc {}\n",
+        include_path.join(plat.clone()).display()
+    );
 
     let bindings = Builder::default()
         .header("res/bindgen_wrapper.h")
@@ -206,14 +211,14 @@ fn get_bindgen_target_include_dirs(
     target: &String,
     platform: &String,
 ) -> (String, String, String, String) {
-    if target == "x86_64-sel4-fel4" {
+    if target.contains("x86_64") {
         (
             "x86".to_string(),
             "x86_64".to_string(),
             "64".to_string(),
             platform.to_string(),
         )
-    } else if target == "arm-sel4-fel4" {
+    } else if target.contains("arm") {
         // some platform names don't map one-to-one
         let plat_include = match platform.as_str() {
             "sabre" => "imx6",
@@ -230,6 +235,13 @@ fn get_bindgen_target_include_dirs(
             "aarch32".to_string(),
             "32".to_string(),
             plat_include.to_string(),
+        )
+    } else if target.contains("aarch64") {
+        (
+            "arm".to_string(),
+            "aarch64".to_string(),
+            "64".to_string(),
+            platform.to_string(),
         )
     } else {
         fail(&format!("unsupported target '{}'", target))
@@ -358,7 +370,9 @@ fn add_cmake_target_options(
             continue;
         }
 
-        if target == "arm-sel4-fel4" && key == "KernelARMPlatform" {
+        if (target.contains("arm") || target.contains("aarch64"))
+            && key == "KernelARMPlatform"
+        {
             platform = value
                 .as_str()
                 .expect("failed to extract KernelARMPlatform value")
