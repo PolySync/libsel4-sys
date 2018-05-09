@@ -81,4 +81,10 @@ CROSS_COMPILER_PREFIX = "arm-linux-gnueabihf-"
 KernelArch = "arm"
 KernelArmSel4Arch = "aarch32"
 KernelARMPlatform = "sabre"
+
+[sel4-cmake-options.aarch64-sel4-fel4]
+CROSS_COMPILER_PREFIX = "aarch64-linux-gnu-"
+KernelArch = "arm"
+KernelArmSel4Arch = "aarch64"
+KernelARMPlatform = "tx1"
 ```
