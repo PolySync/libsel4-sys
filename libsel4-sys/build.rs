@@ -5,12 +5,10 @@
 
 extern crate bindgen;
 extern crate cmake;
-extern crate package_config;
 extern crate toml;
 
 use bindgen::Builder;
 use cmake::Config;
-use package_config::process_cmake_cache;
 use std::env;
 use std::fs;
 use std::fs::File;
@@ -35,16 +33,6 @@ fn main() {
     }
 
     let cargo_output_path = config.build();
-
-    process_cmake_cache(
-        "sel4",
-        Some(
-            cargo_output_path
-                .join("build")
-                .join("CMakeCache.txt"),
-        ),
-        PathBuf::from(getenv_unwrap("OUT_DIR")),
-    );
 
     generate_bindings(
         &target,

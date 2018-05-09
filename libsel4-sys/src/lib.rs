@@ -3,8 +3,6 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-include!(concat!(env!("OUT_DIR"), "/sel4_config.rs"));
-
 extern crate rlibc;
 
 mod c_types {

@@ -7,10 +7,12 @@ Used by: [sel4-workspace](https://bitbucket.org/PolySync/sel4-workspace/overview
 ```
 feL4-dependencies/
 ├── libsel4-sys
-├── package-config
 └── sel4-entry
 ```
 
 - [libsel4-sys](libsel4-sys)
-- [package-config](package-config)
 - [sel4-entry](sel4-entry)
+
+## Setup
+
+Don't forget to run `git submodule update --init` before you start hacking.

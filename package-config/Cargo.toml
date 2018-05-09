@@ -1,8 +1,0 @@
-[package]
-name = "package-config"
-version = "0.0.1"
-publish = false
-exclude = ["test_data"]
-
-[dependencies]
-heck = "0.3"
