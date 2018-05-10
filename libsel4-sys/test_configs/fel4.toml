@@ -1,13 +1,8 @@
 [fel4]
 artifact-path = "images"
 target-specs-path = "targets"
-default-target = "x86_64-sel4-fel4"
-# TODO - we currently have no way to prescribe this via normal
-# Cargo paths, how to use this?
-[fel4.x86_64-sel4-fel4]
-default-platform = "pc99"
-[fel4.arm-sel4-fel4]
-default-platform = "sabre"
+target = "x86_64-sel4-fel4"
+platform = "pc99"
 
 [sel4-cmake-options]
 BuildWithCommonSimulationSettings = true
@@ -89,11 +84,11 @@ KernelMaxNumWorkUnitsPerPreemption = 100
 LinkPageSize = 4096
 UserLinkerGCSections = false
 
-[sel4-cmake-options.pc99]
+[sel4-cmake-options.x86_64-sel4-fel4.pc99]
 KernelX86MicroArch = "nehalem"
 LibPlatSupportX86ConsoleDevice = "com1"
 
-[sel4-cmake-options.sabre]
+[sel4-cmake-options.arm-sel4-fel4.sabre]
 KernelARMPlatform = "sabre"
 ElfloaderImage = "elf"
 ElfloaderMode = "secure supervisor"
