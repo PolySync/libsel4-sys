@@ -2,21 +2,33 @@
 artifact-path = "images"
 target-specs-path = "targets"
 default-target = "x86_64-sel4-fel4"
+# TODO - we currently have no way to prescribe this via normal
+# Cargo paths, how to use this?
+[fel4.x86_64-sel4-fel4]
+default-platform = "pc99"
+[fel4.arm-sel4-fel4]
+default-platform = "sabre"
 
 [sel4-cmake-options]
+BuildWithCommonSimulationSettings = true
 KernelOptimisation = "-02"
 KernelVerificationBuild = false
 KernelBenchmarks = "none"
 KernelDangerousCodeInjection = false
 KernelFastpath = true
-KernelMaxNumNodes = 1
-KernelRetypeFanOutLimit = 256
-KernelNumDomains = 1
-KernelMaxNumBootinfoUntypedCaps = 230
-KernelRootCNodeSizeBits = 19
 LibSel4FunctionAttributes = "public"
-KernelSupportPCID = false
-BuildWithCommonSimulationSettings = true
+KernelNumDomains = 1
+HardwareDebugAPI = false
+KernelColourPrinting = true
+KernelFWholeProgram = false
+KernelResetChunkBits = 8
+LibSel4DebugAllocBufferEntries = 0
+LibSel4DebugFunctionInstrumentation = "none"
+KernelNumPriorities = 256
+KernelStackBits = 12
+KernelTimeSlice = 5
+KernelTimerTickMS = 2
+KernelUserStackTraceLength = 16
 
 [sel4-cmake-options.debug]
 KernelDebugBuild = true
@@ -29,9 +41,63 @@ KernelPrinting = false
 [sel4-cmake-options.x86_64-sel4-fel4]
 KernelArch = "x86"
 KernelX86Sel4Arch = "x86_64"
+KernelMaxNumNodes = 1
+KernelRetypeFanOutLimit = 256
+KernelRootCNodeSizeBits = 19
+KernelMaxNumBootinfoUntypedCaps = 230
+KernelSupportPCID = false
+KernelCacheLnSz = 64
+KernelDebugDisablePrefetchers = false
+KernelExportPMCUser = false
+KernelFPU = "FXSAVE"
+KernelFPUMaxRestoresSinceSwitch = 64
+KernelFSGSBase = "msr"
+KernelHugePage = true
+KernelIOMMU = false
+KernelIRQController = "IOAPIC"
+KernelIRQReporting = true
+KernelLAPICMode = "XAPIC"
+KernelMaxNumIOAPIC = 1
+KernelMaxNumWorkUnitsPerPreemption= 100
+KernelMultiboot1Header = true
+KernelMultiboot2Header = true
+KernelMultibootGFXMode = "none"
+KernelSkimWindow = true
+KernelSyscall = "syscall"
+KernelVTX = false
+KernelX86DangerousMSR = false
+KernelX86IBPBOnContextSwitch = false
+KernelX86IBRSMode = "ibrs_none"
+KernelX86RSBOnContextSwitch = false
+KernelXSaveSize = 576
+LinkPageSize = 4096
+UserLinkerGCSections = false
 
 [sel4-cmake-options.arm-sel4-fel4]
 CROSS_COMPILER_PREFIX = "arm-linux-gnueabihf-"
 KernelArch = "arm"
 KernelArmSel4Arch = "aarch32"
+KernelMaxNumNodes = 1
+KernelRetypeFanOutLimit = 256
+KernelRootCNodeSizeBits = 19
+KernelMaxNumBootinfoUntypedCaps = 230
+KernelAArch32FPUEnableContextSwitch = true
+KernelDebugDisableBranchPrediction = false
+KernelFPUMaxRestoresSinceSwitch = 64
+KernelIPCBufferLocation = "threadID_register"
+KernelMaxNumWorkUnitsPerPreemption = 100
+LinkPageSize = 4096
+UserLinkerGCSections = false
+
+[sel4-cmake-options.pc99]
+KernelX86MicroArch = "nehalem"
+LibPlatSupportX86ConsoleDevice = "com1"
+
+[sel4-cmake-options.sabre]
 KernelARMPlatform = "sabre"
+ElfloaderImage = "elf"
+ElfloaderMode = "secure supervisor"
+ElfloaderErrata764369 = true
+KernelArmEnableA9Prefetcher = false
+KernelArmExportPMUUser = false
+KernelDebugDisableL2Cache = false
