@@ -95,9 +95,15 @@ elseif("${KernelArch}" STREQUAL "arm")
     set_property(TARGET rootserver_image PROPERTY ROOTSERVER_IMAGE "$ENV{FEL4_ROOT_TASK_IMAGE_PATH}")
 endif()
 
-# mock what we want to export for the build system, uses relative paths for now
-set_property(TARGET rootserver_image PROPERTY IMAGE_NAME "images/feL4img")
-set_property(TARGET rootserver_image PROPERTY KERNEL_IMAGE_NAME "images/kernel")
+# get the basename of FEL4_ARTIFACT_PATH
+get_filename_component(
+    FEL4_ARTIFACT_BASENAME
+    "$ENV{FEL4_ARTIFACT_PATH}"
+    NAME)
+
+# mock the rootserver_image properties used by the simulate script building mechanism
+set_property(TARGET rootserver_image PROPERTY IMAGE_NAME "${FEL4_ARTIFACT_BASENAME}/feL4img")
+set_property(TARGET rootserver_image PROPERTY KERNEL_IMAGE_NAME "${FEL4_ARTIFACT_BASENAME}/kernel")
 
 install(
     DIRECTORY
