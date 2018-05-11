@@ -93,4 +93,27 @@ pub unsafe extern "C" fn strcpy(
 /// - `feL4-dependencies/issues/18`
 pub const seL4_WordBits: u32 = 32;
 
+#[cfg(all(target_arch = "aarch64", target_os = "sel4", target_env = "fel4"))]
+/// Number of bits in a `seL4_Word`.
+///
+/// # Remarks
+///
+/// Normally this is defined as the following macro:
+/// ```
+/// #define seL4_WordBits (sizeof(seL4_Word) * 8)
+/// ```
+///
+/// For our `aarch64-sel4-fel4` target see file:
+/// `libsel4/sel4_arch_include/aarch64/sel4/sel4_arch/constants.h`
+///
+/// However due to bindgen not being able to expand functional
+/// macros, the type gets ignored.
+///
+/// For the time being, we just provide the constant here.
+///
+/// See following issues for more information:
+/// - `rust-bindgen/issues/753`
+/// - `feL4-dependencies/issues/18`
+pub const seL4_WordBits: u32 = 64;
+
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));

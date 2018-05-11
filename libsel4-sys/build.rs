@@ -8,18 +8,42 @@ extern crate cmake;
 extern crate toml;
 
 use bindgen::Builder;
-use cmake::Config;
+use cmake::Config as CmakeConfig;
 use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use toml::Value;
+
+#[derive(PartialEq)]
+pub enum ArchHint {
+    X86,
+    ARM,
+    ARMV8,
+}
+
+struct TomlConfig {
+    target: String,
+    target_arch: ArchHint,
+    platform: String,
+    cmake_root_config: toml::Value,
+    cmake_build_config: toml::Value,
+    cmake_target_config: toml::Value,
+    cmake_platform_config: toml::Value,
+}
+
+struct BindgenHeaderIncludeConfig {
+    kernel_arch: String,
+    kernel_sel4_arch: String,
+    width: String,
+    platform: String,
+}
 
 fn main() {
-    let mut config = Config::new(".");
+    let mut cmake_build_config = CmakeConfig::new(".");
 
-    let (target, platform) = configure_cmake_build(&mut config);
+    // configure the CMake build from fel4.toml
+    let toml_config = configure_cmake_build(&mut cmake_build_config);
 
     // delete any existing CMakeCache.txt to prevent seL4/CMake from
     // unexpected reconfigurations
@@ -32,11 +56,11 @@ fn main() {
             .expect("failed to delete previous CMakeCache.txt file");
     }
 
-    let cargo_output_path = config.build();
+    // perform the cmake build
+    let cargo_output_path = cmake_build_config.build();
 
     generate_bindings(
-        &target,
-        &platform,
+        &toml_config,
         cargo_output_path.join("build").join("staging"),
     );
 
@@ -61,10 +85,7 @@ fn main() {
     // native libsel4.a location
     println!(
         "cargo:rustc-link-search=native={}",
-        cargo_output_path
-            .join("build")
-            .join("libsel4")
-            .display()
+        cargo_output_path.join("build").join("libsel4").display()
     );
 
     println!("cargo:rustc-link-lib=static=sel4");
@@ -74,8 +95,8 @@ fn main() {
 ///
 /// You can access these as environment variables:
 /// - `DEP_SEL4_CMAKE_CACHE_PATH`
-/// - `DEP_KERNEL_PATH`
-/// - `DEP_SIMULATION_SCRIPT_PATH`
+/// - `DEP_SEL4_KERNEL_PATH`
+/// - `DEP_SEL4_SIMULATION_SCRIPT_PATH`
 fn print_cargo_links_keys(cargo_output_path: PathBuf) {
     println!(
         "cargo:cmake_cache_path={}",
@@ -96,10 +117,7 @@ fn print_cargo_links_keys(cargo_output_path: PathBuf) {
 
     println!(
         "cargo:simulation_script_path={}",
-        cargo_output_path
-            .join("build")
-            .join("simulate")
-            .display()
+        cargo_output_path.join("build").join("simulate").display()
     );
 }
 
@@ -121,10 +139,7 @@ fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
     }
 
     fs::copy(
-        artifact_path
-            .join("build")
-            .join("images")
-            .join("kernel"),
+        artifact_path.join("build").join("images").join("kernel"),
         output_path.join("kernel"),
     ).unwrap();
 
@@ -134,9 +149,7 @@ fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
     ).unwrap();
 
     fs::copy(
-        artifact_path
-            .join("build")
-            .join("CMakeCache.txt"),
+        artifact_path.join("build").join("CMakeCache.txt"),
         output_path.join("CMakeCache.txt"),
     ).unwrap();
 
@@ -151,15 +164,10 @@ fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
 }
 
 /// Generate the libsel4 Rust bindings.
-fn generate_bindings(
-    target: &String,
-    platform: &String,
-    include_path: PathBuf,
-) {
-    let (kernel_arch, sel4_arch, width, plat) =
-        get_bindgen_target_include_dirs(target, platform);
+fn generate_bindings(toml_config: &TomlConfig, include_path: PathBuf) {
+    let bindgen_include_config = get_bindgen_include_config(toml_config);
 
-    let target_args = if target == "arm-sel4-fel4" {
+    let target_args = if toml_config.target_arch == ArchHint::ARM {
         String::from("-mfloat-abi=hard")
     } else {
         String::from("")
@@ -177,10 +185,10 @@ fn generate_bindings(
         .blacklist_type("__assert_fail")
         .clang_arg(target_args)
         .clang_arg(format!("-I{}", include_path.join("include").display()))
-        .clang_arg(format!("-I{}", include_path.join(kernel_arch).display()))
-        .clang_arg(format!("-I{}", include_path.join(sel4_arch).display()))
-        .clang_arg(format!("-I{}", include_path.join(width).display()))
-        .clang_arg(format!("-I{}", include_path.join(plat).display()))
+        .clang_arg(format!("-I{}", include_path.join(bindgen_include_config.kernel_arch).display()))
+        .clang_arg(format!("-I{}", include_path.join(bindgen_include_config.kernel_sel4_arch).display()))
+        .clang_arg(format!("-I{}", include_path.join(bindgen_include_config.width).display()))
+        .clang_arg(format!("-I{}", include_path.join(bindgen_include_config.platform).display()))
         .clang_arg(format!("-I{}", include_path.join("autoconf").display()))
         .clang_arg(format!("-I{}", include_path.join("gen_config").display()))
         .clang_arg(format!("-I{}", include_path.join("include").display()))
@@ -194,23 +202,24 @@ fn generate_bindings(
         .expect("failed to write bindings to file");
 }
 
-/// Parses the target triple and platform to produce
-/// a bindgen compatable include
-/// token Strings (kernel_arch, kernel_sel4_arch, width, platform).
-fn get_bindgen_target_include_dirs(
-    target: &String,
-    platform: &String,
-) -> (String, String, String, String) {
-    if target == "x86_64-sel4-fel4" {
-        (
-            "x86".to_string(),
-            "x86_64".to_string(),
-            "64".to_string(),
-            platform.to_string(),
-        )
-    } else if target == "arm-sel4-fel4" {
+/// Parses the target and platform data to produce
+/// bindgen compatable include
+/// token Strings.
+///
+/// Returns a BindgenHeaderIncludeConfig.
+fn get_bindgen_include_config(
+    toml_config: &TomlConfig,
+) -> BindgenHeaderIncludeConfig {
+    if toml_config.target_arch == ArchHint::X86 {
+        BindgenHeaderIncludeConfig {
+            kernel_arch: String::from("x86"),
+            kernel_sel4_arch: String::from("x86_64"),
+            width: String::from("64"),
+            platform: toml_config.platform.to_string(),
+        }
+    } else if toml_config.target_arch == ArchHint::ARM {
         // some platform names don't map one-to-one
-        let plat_include = match platform.as_str() {
+        let plat_include = match toml_config.platform.as_str() {
             "sabre" => "imx6",
             "exynos5410" => "exynos5",
             "exynos5422" => "exynos5",
@@ -220,22 +229,29 @@ fn get_bindgen_target_include_dirs(
             p => p,
         };
 
-        (
-            "arm".to_string(),
-            "aarch32".to_string(),
-            "32".to_string(),
-            plat_include.to_string(),
-        )
+        BindgenHeaderIncludeConfig {
+            kernel_arch: String::from("arm"),
+            kernel_sel4_arch: String::from("aarch32"),
+            width: String::from("32"),
+            platform: plat_include.to_string(),
+        }
+    } else if toml_config.target_arch == ArchHint::ARMV8 {
+        BindgenHeaderIncludeConfig {
+            kernel_arch: String::from("arm"),
+            kernel_sel4_arch: String::from("aarch64"),
+            width: String::from("64"),
+            platform: toml_config.platform.to_string(),
+        }
     } else {
-        fail(&format!("unsupported target '{}'", target))
+        fail(&format!("unsupported target '{}'", toml_config.target))
     }
 }
 
 /// Configure a CMake build configuration from toml.
 ///
-/// Returns (target-triple, platform).
-fn configure_cmake_build(config: &mut Config) -> (String, String) {
-    let target = getenv_unwrap("TARGET");
+/// Returns a TomlConfig representation of fel4.toml.
+fn configure_cmake_build(cmake_config: &mut CmakeConfig) -> TomlConfig {
+    let cargo_target = getenv_unwrap("TARGET");
 
     let root_dir = getenv_unwrap("CARGO_MANIFEST_DIR");
 
@@ -245,132 +261,69 @@ fn configure_cmake_build(config: &mut Config) -> (String, String) {
 
     let fel4_manifest = PathBuf::from(getenv_unwrap("FEL4_MANIFEST_PATH"));
 
-    println!(
-        "cargo:rerun-if-changed={}",
-        fel4_manifest.display()
-    );
+    println!("cargo:rerun-if-changed={}", fel4_manifest.display());
 
-    let cmake_options = get_cmake_options_table(fel4_manifest);
+    // parse fel4.toml
+    let toml_config = get_toml_config(fel4_manifest, &getenv_unwrap("PROFILE"));
+
+    if cargo_target != toml_config.target {
+        fail(&format!("Cargo is attempting to build for the {} target, however fel4.toml has declared the target to be {}", cargo_target, toml_config.target));
+    }
 
     // CMAKE_TOOLCHAIN_FILE is resolved immediately by CMake
-    config.define(
-        "CMAKE_TOOLCHAIN_FILE",
-        kernel_path.join("gcc.cmake"),
+    cmake_config.define("CMAKE_TOOLCHAIN_FILE", kernel_path.join("gcc.cmake"));
+
+    cmake_config.define("KERNEL_PATH", kernel_path);
+
+    // add options from build profile sub-table
+    add_cmake_options_from_table(&toml_config.cmake_build_config, cmake_config);
+
+    // add options from target sub-table
+    add_cmake_options_from_table(
+        &toml_config.cmake_target_config,
+        cmake_config,
     );
 
-    config.define("KERNEL_PATH", kernel_path);
-
-    add_cmake_build_type_options(
-        &getenv_unwrap("PROFILE"),
-        &cmake_options,
-        config,
+    // add options from platform sub-table
+    add_cmake_options_from_table(
+        &toml_config.cmake_platform_config,
+        cmake_config,
     );
 
-    // add options inferred from target specification
-    let platform = add_cmake_target_options(&target, &cmake_options, config);
+    // add options from the root level table
+    add_cmake_options_from_table(&toml_config.cmake_root_config, cmake_config);
 
     // seL4 handles these so we clear them to prevent cmake-rs from
     // auto-populating
-    config.define("CMAKE_C_FLAGS", "");
-    config.define("CMAKE_CXX_FLAGS", "");
-
-    for (key, value) in cmake_options
-        .as_table()
-        .expect("failed to read cmake options Cargo.toml table")
-    {
-        // ignore other tables within this one
-        if value.is_table() {
-            continue;
-        }
-
-        add_cmake_definition(key, value, config);
-    }
+    cmake_config.define("CMAKE_C_FLAGS", "");
+    cmake_config.define("CMAKE_CXX_FLAGS", "");
 
     // Ninja generator
-    config.generator("Ninja");
+    cmake_config.generator("Ninja");
 
-    (target, platform)
+    toml_config
 }
 
-/// Add build type (debug/release) specific CMake configurations.
-fn add_cmake_build_type_options(
-    build_type: &String,
-    options: &toml::Value,
-    config: &mut Config,
+/// Add CMake configurations from a toml table.
+fn add_cmake_options_from_table(
+    toml_table: &toml::Value,
+    cmake_config: &mut CmakeConfig,
 ) {
-    let build_type_table = match options.get(&build_type) {
-        Some(btt) => match btt {
-            Value::Table(h) => h,
-            _ => fail(&format!(
-                "build type '{}' section is malformed",
-                &build_type
-            )),
-        },
-        None => fail(&format!(
-            "build type '{}' section is missing",
-            &build_type
-        )),
-    };
-
-    for (key, value) in build_type_table {
+    for (key, value) in toml_table.as_table().unwrap() {
         // ignore other tables within this one
         if value.is_table() {
             continue;
         }
 
-        add_cmake_definition(key, value, config);
+        add_cmake_definition(key, value, cmake_config);
     }
-}
-
-/// Add target specific CMake configurations.
-///
-/// Returns platform String.
-fn add_cmake_target_options(
-    target: &String,
-    options: &toml::Value,
-    config: &mut Config,
-) -> String {
-    let target_table = match options.get(&target) {
-        Some(tt) => match tt {
-            Value::Table(h) => h,
-            _ => fail(&format!(
-                "target '{}' section is malformed",
-                &target
-            )),
-        },
-        None => fail(&format!(
-            "target '{}' section is missing",
-            &target
-        )),
-    };
-
-    // the default is pc99, the only platform for x86/x86_64
-    let mut platform = String::from("pc99");
-
-    for (key, value) in target_table {
-        // ignore other tables within this one
-        if value.is_table() {
-            continue;
-        }
-
-        if target == "arm-sel4-fel4" && key == "KernelARMPlatform" {
-            platform = value
-                .as_str()
-                .expect("failed to extract KernelARMPlatform value")
-                .to_string();
-        }
-
-        add_cmake_definition(key, value, config);
-    }
-
-    platform
 }
 
 /// Add a CMake configuration definition
 fn add_cmake_definition(
     key: &String,
     value: &toml::Value,
-    config: &mut Config,
+    config: &mut CmakeConfig,
 ) {
     // booleans use the :<type> syntax, with ON/OFF values
     // everything else is treated as a string
@@ -394,31 +347,77 @@ fn add_cmake_definition(
     } else {
         config.define(
             key,
-            value.as_str().expect(&format!(
-                "failed to convert key '{}' to str",
-                value
-            )),
+            value
+                .as_str()
+                .expect(&format!("failed to convert key '{}' to str", value)),
         );
     }
 }
 
-/// Return the CMake options table from toml file.
-fn get_cmake_options_table(path: PathBuf) -> toml::Value {
-    let mut manifest_file = File::open(&path).expect(&format!(
-        "failed to open manifest file {}",
-        path.display()
-    ));
+/// Returns a TomlConfig generated from a fel4.toml file.
+fn get_toml_config(path: PathBuf, build_profile: &String) -> TomlConfig {
+    let mut manifest_file = File::open(&path)
+        .expect(&format!("failed to open manifest file {}", path.display()));
 
     let mut contents = String::new();
 
-    manifest_file
-        .read_to_string(&mut contents)
-        .unwrap();
+    manifest_file.read_to_string(&mut contents).unwrap();
 
-    let manifest = contents.parse::<toml::Value>().unwrap();
-    match manifest.get("sel4-cmake-options") {
-        Some(t) => t.clone(),
-        None => panic!("missing sel4-cmake-options"),
+    let manifest = contents
+        .parse::<toml::Value>()
+        .expect("failed to parse fel4.toml");
+
+    let fel4_table = match manifest.get("fel4") {
+        Some(t) => t,
+        None => fail("fel4.toml is missing fel4 table"),
+    };
+
+    let target = match fel4_table.get("target") {
+        Some(t) => String::from(t.as_str().unwrap()),
+        None => fail("fel4.toml is missing target key"),
+    };
+
+    let platform = match fel4_table.get("platform") {
+        Some(t) => String::from(t.as_str().unwrap()),
+        None => fail("fel4.toml is missing platform key"),
+    };
+
+    let cmake_root_config = match manifest.get("sel4-cmake-options") {
+        Some(t) => t,
+        None => fail("fel4.toml is missing sel4-cmake-options table"),
+    };
+
+    let target_config = match cmake_root_config.get(&target) {
+        Some(t) => t,
+        None => fail("fel4.toml is missing sel4-cmake-options target table"),
+    };
+
+    TomlConfig {
+        target: target.clone(),
+        target_arch: if target.contains("arm") {
+            ArchHint::ARM
+        } else if target.contains("aarch64") {
+            ArchHint::ARMV8
+        } else if target.contains("x86") {
+            ArchHint::X86
+        } else {
+            fail("fel4.toml target is not supported");
+        },
+        platform: platform.clone(),
+        cmake_root_config: cmake_root_config.clone(),
+        cmake_build_config: match cmake_root_config.get(&build_profile) {
+            Some(t) => t.clone(),
+            None => {
+                fail("fel4.toml is missing sel4-cmake-options build type table")
+            }
+        },
+        cmake_target_config: target_config.clone(),
+        cmake_platform_config: match target_config.get(&platform) {
+            Some(t) => t.clone(),
+            None => {
+                fail("fel4.toml is missing sel4-cmake-options platform table")
+            }
+        },
     }
 }
 
@@ -426,14 +425,11 @@ fn get_cmake_options_table(path: PathBuf) -> toml::Value {
 fn getenv_unwrap(v: &str) -> String {
     match env::var(v) {
         Ok(s) => s,
-        Err(..) => fail(&format!(
-            "environment variable `{}` not defined",
-            v
-        )),
+        Err(..) => fail(&format!("environment variable `{}` not defined", v)),
     }
 }
 
 /// Failure with panic.
 fn fail(s: &str) -> ! {
-    panic!("\n{}\n\nbuild script failed", s)
+    panic!("\n{}\n\nlibsel4-sys build script failed", s)
 }
