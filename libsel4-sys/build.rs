@@ -26,9 +26,8 @@ struct TomlConfig {
     target: String,
     target_arch: ArchHint,
     platform: String,
-    cmake_root_config: toml::Value,
-    cmake_build_config: toml::Value,
     cmake_target_config: toml::Value,
+    cmake_profile_config: toml::Value,
     cmake_platform_config: toml::Value,
 }
 
@@ -276,7 +275,10 @@ fn configure_cmake_build(cmake_config: &mut CmakeConfig) -> TomlConfig {
     cmake_config.define("KERNEL_PATH", kernel_path);
 
     // add options from build profile sub-table
-    add_cmake_options_from_table(&toml_config.cmake_build_config, cmake_config);
+    add_cmake_options_from_table(
+        &toml_config.cmake_profile_config,
+        cmake_config,
+    );
 
     // add options from target sub-table
     add_cmake_options_from_table(
@@ -289,9 +291,6 @@ fn configure_cmake_build(cmake_config: &mut CmakeConfig) -> TomlConfig {
         &toml_config.cmake_platform_config,
         cmake_config,
     );
-
-    // add options from the root level table
-    add_cmake_options_from_table(&toml_config.cmake_root_config, cmake_config);
 
     // seL4 handles these so we clear them to prevent cmake-rs from
     // auto-populating
@@ -382,14 +381,9 @@ fn get_toml_config(path: PathBuf, build_profile: &String) -> TomlConfig {
         None => fail("fel4.toml is missing platform key"),
     };
 
-    let cmake_root_config = match manifest.get("sel4-cmake-options") {
+    let target_config = match manifest.get(&target) {
         Some(t) => t,
-        None => fail("fel4.toml is missing sel4-cmake-options table"),
-    };
-
-    let target_config = match cmake_root_config.get(&target) {
-        Some(t) => t,
-        None => fail("fel4.toml is missing sel4-cmake-options target table"),
+        None => fail("fel4.toml is missing the target table"),
     };
 
     TomlConfig {
@@ -404,19 +398,14 @@ fn get_toml_config(path: PathBuf, build_profile: &String) -> TomlConfig {
             fail("fel4.toml target is not supported");
         },
         platform: platform.clone(),
-        cmake_root_config: cmake_root_config.clone(),
-        cmake_build_config: match cmake_root_config.get(&build_profile) {
-            Some(t) => t.clone(),
-            None => {
-                fail("fel4.toml is missing sel4-cmake-options build type table")
-            }
-        },
         cmake_target_config: target_config.clone(),
+        cmake_profile_config: match target_config.get(&build_profile) {
+            Some(t) => t.clone(),
+            None => fail("fel4.toml is missing build profile table"),
+        },
         cmake_platform_config: match target_config.get(&platform) {
             Some(t) => t.clone(),
-            None => {
-                fail("fel4.toml is missing sel4-cmake-options platform table")
-            }
+            None => fail("fel4.toml is missing target platform table"),
         },
     }
 }

@@ -4,7 +4,7 @@ target-specs-path = "targets"
 target = "x86_64-sel4-fel4"
 platform = "pc99"
 
-[sel4-cmake-options]
+[x86_64-sel4-fel4]
 BuildWithCommonSimulationSettings = true
 KernelOptimisation = "-02"
 KernelVerificationBuild = false
@@ -24,16 +24,7 @@ KernelStackBits = 12
 KernelTimeSlice = 5
 KernelTimerTickMS = 2
 KernelUserStackTraceLength = 16
-
-[sel4-cmake-options.debug]
-KernelDebugBuild = true
-KernelPrinting = true
-
-[sel4-cmake-options.release]
-KernelDebugBuild = false
-KernelPrinting = false
-
-[sel4-cmake-options.x86_64-sel4-fel4]
+# the following keys are specific to x86_64-sel4-fel4 targets
 KernelArch = "x86"
 KernelX86Sel4Arch = "x86_64"
 KernelMaxNumNodes = 1
@@ -68,7 +59,39 @@ KernelXSaveSize = 576
 LinkPageSize = 4096
 UserLinkerGCSections = false
 
-[sel4-cmake-options.arm-sel4-fel4]
+[x86_64-sel4-fel4.pc99]
+KernelX86MicroArch = "nehalem"
+LibPlatSupportX86ConsoleDevice = "com1"
+
+[x86_64-sel4-fel4.debug]
+KernelDebugBuild = true
+KernelPrinting = true
+
+[x86_64-sel4-fel4.release]
+KernelDebugBuild = false
+KernelPrinting = false
+
+[arm-sel4-fel4]
+BuildWithCommonSimulationSettings = true
+KernelOptimisation = "-02"
+KernelVerificationBuild = false
+KernelBenchmarks = "none"
+KernelDangerousCodeInjection = false
+KernelFastpath = true
+LibSel4FunctionAttributes = "public"
+KernelNumDomains = 1
+HardwareDebugAPI = false
+KernelColourPrinting = true
+KernelFWholeProgram = false
+KernelResetChunkBits = 8
+LibSel4DebugAllocBufferEntries = 0
+LibSel4DebugFunctionInstrumentation = "none"
+KernelNumPriorities = 256
+KernelStackBits = 12
+KernelTimeSlice = 5
+KernelTimerTickMS = 2
+KernelUserStackTraceLength = 16
+# the following keys are specific to arm-sel4-fel4 targets
 CROSS_COMPILER_PREFIX = "arm-linux-gnueabihf-"
 KernelArch = "arm"
 KernelArmSel4Arch = "aarch32"
@@ -84,11 +107,15 @@ KernelMaxNumWorkUnitsPerPreemption = 100
 LinkPageSize = 4096
 UserLinkerGCSections = false
 
-[sel4-cmake-options.x86_64-sel4-fel4.pc99]
-KernelX86MicroArch = "nehalem"
-LibPlatSupportX86ConsoleDevice = "com1"
+[arm-sel4-fel4.debug]
+KernelDebugBuild = true
+KernelPrinting = true
 
-[sel4-cmake-options.arm-sel4-fel4.sabre]
+[arm-sel4-fel4.release]
+KernelDebugBuild = false
+KernelPrinting = false
+
+[arm-sel4-fel4.sabre]
 KernelARMPlatform = "sabre"
 ElfloaderImage = "elf"
 ElfloaderMode = "secure supervisor"
