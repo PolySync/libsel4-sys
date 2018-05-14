@@ -22,9 +22,6 @@ if(BuildWithCommonSimulationSettings)
     GenerateSimulateScript()
 endif(BuildWithCommonSimulationSettings)
 
-# TODO - remove override
-ApplyCommonReleaseVerificationSettings(OFF OFF)
-
 # disable GC sections as it causes binaries to be stripped sometimes
 set(UserLinkerGCSections OFF CACHE BOOL "" FORCE)
 
