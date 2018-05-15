@@ -3,17 +3,12 @@
 Builds the sel4 kernel and generates bindings around it,
 as configured by a fel4 manifest.
 
-## TODOs
-
-- need to fix the cmakelist.txt file
-- when to trigger reruns?
-
 ## Project Layout
 
 ```
 libsel4-sys/
-├── Cargo.toml              <-- CMake build configuration keys in toml tables
-├── build.rs
+├── Cargo.toml
+├── build.rs                <-- Pulls in fel4 toml for CMake configuration
 ├── CMakeLists.txt
 ├── deps                    <-- submodules to seL4 repositories
 │   ├── musllibc

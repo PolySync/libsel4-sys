@@ -23,10 +23,10 @@ mod c_types {
     pub type c_longlong = i64;
 }
 
-#[cfg(feature = "KERNEL_PRINTING")]
+#[cfg(feature = "KernelPrinting")]
 pub struct DebugOutHandle;
 
-#[cfg(feature = "KERNEL_PRINTING")]
+#[cfg(feature = "KernelPrinting")]
 impl ::core::fmt::Write for DebugOutHandle {
     fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
         for &b in s.as_bytes() {
