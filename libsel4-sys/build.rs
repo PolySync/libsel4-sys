@@ -5,31 +5,15 @@
 
 extern crate bindgen;
 extern crate cmake;
-extern crate toml;
+extern crate fel4_config;
 
 use bindgen::Builder;
 use cmake::Config as CmakeConfig;
+use fel4_config::{Fel4Config, SupportedPlatform, SupportedTarget};
 use std::env;
 use std::fs;
-use std::fs::File;
-use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-#[derive(PartialEq)]
-pub enum ArchHint {
-    X86,
-    ARM,
-    ARMV8,
-}
-
-struct TomlConfig {
-    target: String,
-    target_arch: ArchHint,
-    platform: String,
-    cmake_target_config: toml::Value,
-    cmake_profile_config: toml::Value,
-    cmake_platform_config: toml::Value,
-}
 
 struct BindgenHeaderIncludeConfig {
     kernel_arch: String,
@@ -39,10 +23,24 @@ struct BindgenHeaderIncludeConfig {
 }
 
 fn main() {
-    let mut cmake_build_config = CmakeConfig::new(".");
+    // Resolve fel4 configuration from the manifest located via FEL4_MANIFEST_PATH and PROFILE env-vars
+    let (fel4_manifest_path, build_profile ) = match fel4_config::infer_manifest_location_from_env() {
+        Ok(p) => p,
+        Err(e) => panic!("libsel4-sys build.rs had trouble figuring out where to pull fel4 config from. {}", e),
+    };
+    println!("cargo:rerun-if-changed={}", fel4_manifest_path.display());
+    let fel4 = match fel4_config::get_fel4_config(&fel4_manifest_path, &build_profile) {
+        Ok(f) => f,
+        Err(e) => { panic!("libsel4-sys build.rs ran into trouble with the fel4 manifest found at {:?}. {}", &fel4_manifest_path, e) },
+    };
+    println!("cargo:rerun-if-changed={}", fs::canonicalize(&fel4_manifest_path).expect("Could not canonicalize the fel4 manifest path").display());
 
-    // configure the CMake build from fel4.toml
-    let toml_config = configure_cmake_build(&mut cmake_build_config);
+    // Configure the CMake build using the data resolved from the fel4 manifest
+    let mut cmake_build_config = CmakeConfig::new(".");
+    match fel4_config::configure_cmake_build_from_env(&mut cmake_build_config, &fel4) {
+        Ok(_) => {},
+        Err(e) => { panic!("libsel4-sys build.rs ran into trouble configuring the sel4 kernel CMake build when using the fel4 manifest from {:?}. {}", &fel4_manifest_path, e) },
+    };
 
     // delete any existing CMakeCache.txt to prevent seL4/CMake from
     // unexpected reconfigurations
@@ -59,7 +57,7 @@ fn main() {
     let cargo_output_path = cmake_build_config.build();
 
     generate_bindings(
-        &toml_config,
+        &fel4,
         cargo_output_path.join("build").join("staging"),
     );
 
@@ -123,6 +121,7 @@ fn print_cargo_links_keys(cargo_output_path: PathBuf) {
 /// Print common environment rerun-if's.
 fn print_cargo_rerun_if_flags() {
     println!("cargo:rerun-if-env-changed=OUT_DIR");
+    println!("cargo:rerun-if-env-changed=PROFILE");
     println!("cargo:rerun-if-env-changed=FEL4_MANIFEST_PATH");
     println!("cargo:rerun-if-env-changed=FEL4_ARTIFACT_PATH");
     println!("cargo:rerun-if-env-changed=FEL4_ROOT_TASK_IMAGE_PATH");
@@ -163,10 +162,10 @@ fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
 }
 
 /// Generate the libsel4 Rust bindings.
-fn generate_bindings(toml_config: &TomlConfig, include_path: PathBuf) {
-    let bindgen_include_config = get_bindgen_include_config(toml_config);
+fn generate_bindings(fel4: &Fel4Config, include_path: PathBuf) {
+    let bindgen_include_config = get_bindgen_include_config(fel4);
 
-    let target_args = if toml_config.target_arch == ArchHint::ARM {
+    let target_args = if fel4.target == SupportedTarget::ArmSel4Fel4 {
         String::from("-mfloat-abi=hard")
     } else {
         String::from("")
@@ -207,208 +206,46 @@ fn generate_bindings(toml_config: &TomlConfig, include_path: PathBuf) {
 ///
 /// Returns a BindgenHeaderIncludeConfig.
 fn get_bindgen_include_config(
-    toml_config: &TomlConfig,
+    fel4: &Fel4Config,
 ) -> BindgenHeaderIncludeConfig {
-    if toml_config.target_arch == ArchHint::X86 {
-        BindgenHeaderIncludeConfig {
-            kernel_arch: String::from("x86"),
-            kernel_sel4_arch: String::from("x86_64"),
-            width: String::from("64"),
-            platform: toml_config.platform.to_string(),
-        }
-    } else if toml_config.target_arch == ArchHint::ARM {
-        // some platform names don't map one-to-one
-        let plat_include = match toml_config.platform.as_str() {
-            "sabre" => "imx6",
-            "exynos5410" => "exynos5",
-            "exynos5422" => "exynos5",
-            "exynos5250" => "exynos5",
-            "imx7sabre" => "imx7",
-            "rpi3" => "bcm2837",
-            p => p,
-        };
-
-        BindgenHeaderIncludeConfig {
-            kernel_arch: String::from("arm"),
-            kernel_sel4_arch: String::from("aarch32"),
-            width: String::from("32"),
-            platform: plat_include.to_string(),
-        }
-    } else if toml_config.target_arch == ArchHint::ARMV8 {
-        BindgenHeaderIncludeConfig {
-            kernel_arch: String::from("arm"),
-            kernel_sel4_arch: String::from("aarch64"),
-            width: String::from("64"),
-            platform: toml_config.platform.to_string(),
-        }
-    } else {
-        fail(&format!("unsupported target '{}'", toml_config.target))
-    }
-}
-
-/// Configure a CMake build configuration from toml.
-///
-/// Returns a TomlConfig representation of fel4.toml.
-fn configure_cmake_build(cmake_config: &mut CmakeConfig) -> TomlConfig {
-    let cargo_target = getenv_unwrap("TARGET");
-
-    let root_dir = getenv_unwrap("CARGO_MANIFEST_DIR");
-
-    let root_path = Path::new(&root_dir);
-
-    let kernel_path = root_path.join("deps").join("seL4_kernel");
-
-    let fel4_manifest = PathBuf::from(getenv_unwrap("FEL4_MANIFEST_PATH"));
-
-    println!("cargo:rerun-if-changed={}", fel4_manifest.display());
-
-    // parse fel4.toml
-    let toml_config = get_toml_config(fel4_manifest, &getenv_unwrap("PROFILE"));
-
-    if cargo_target != toml_config.target {
-        fail(&format!("Cargo is attempting to build for the {} target, however fel4.toml has declared the target to be {}", cargo_target, toml_config.target));
-    }
-
-    // CMAKE_TOOLCHAIN_FILE is resolved immediately by CMake
-    cmake_config.define("CMAKE_TOOLCHAIN_FILE", kernel_path.join("gcc.cmake"));
-
-    cmake_config.define("KERNEL_PATH", kernel_path);
-
-    // add options from build profile sub-table
-    add_cmake_options_from_table(
-        &toml_config.cmake_profile_config,
-        cmake_config,
-    );
-
-    // add options from target sub-table
-    add_cmake_options_from_table(
-        &toml_config.cmake_target_config,
-        cmake_config,
-    );
-
-    // add options from platform sub-table
-    add_cmake_options_from_table(
-        &toml_config.cmake_platform_config,
-        cmake_config,
-    );
-
-    // seL4 handles these so we clear them to prevent cmake-rs from
-    // auto-populating
-    cmake_config.define("CMAKE_C_FLAGS", "");
-    cmake_config.define("CMAKE_CXX_FLAGS", "");
-
-    // Ninja generator
-    cmake_config.generator("Ninja");
-
-    toml_config
-}
-
-/// Add CMake configurations from a toml table.
-fn add_cmake_options_from_table(
-    toml_table: &toml::Value,
-    cmake_config: &mut CmakeConfig,
-) {
-    for (key, value) in toml_table.as_table().unwrap() {
-        // ignore other tables within this one
-        if value.is_table() {
-            continue;
-        }
-
-        add_cmake_definition(key, value, cmake_config);
-    }
-}
-
-/// Add a CMake configuration definition
-fn add_cmake_definition(
-    key: &String,
-    value: &toml::Value,
-    config: &mut CmakeConfig,
-) {
-    // booleans use the :<type> syntax, with ON/OFF values
-    // everything else is treated as a string
-    if value.type_str() == "boolean" {
-        if value.as_bool().unwrap() == true {
-            config.define(format!("{}:BOOL", key), "ON");
-        } else {
-            config.define(format!("{}:BOOL", key), "OFF");
-        }
-    } else if value.type_str() == "integer" {
-        config.define(
-            key,
-            value
-                .as_integer()
-                .expect(&format!(
-                    "failed to convert key '{}' to integer",
-                    value
-                ))
-                .to_string(),
-        );
-    } else {
-        config.define(
-            key,
-            value
-                .as_str()
-                .expect(&format!("failed to convert key '{}' to str", value)),
-        );
-    }
-}
-
-/// Returns a TomlConfig generated from a fel4.toml file.
-fn get_toml_config(path: PathBuf, build_profile: &String) -> TomlConfig {
-    let mut manifest_file = File::open(&path)
-        .expect(&format!("failed to open manifest file {}", path.display()));
-
-    let mut contents = String::new();
-
-    manifest_file.read_to_string(&mut contents).unwrap();
-
-    let manifest = contents
-        .parse::<toml::Value>()
-        .expect("failed to parse fel4.toml");
-
-    let fel4_table = match manifest.get("fel4") {
-        Some(t) => t,
-        None => fail("fel4.toml is missing fel4 table"),
-    };
-
-    let target = match fel4_table.get("target") {
-        Some(t) => String::from(t.as_str().unwrap()),
-        None => fail("fel4.toml is missing target key"),
-    };
-
-    let platform = match fel4_table.get("platform") {
-        Some(t) => String::from(t.as_str().unwrap()),
-        None => fail("fel4.toml is missing platform key"),
-    };
-
-    let target_config = match manifest.get(&target) {
-        Some(t) => t,
-        None => fail("fel4.toml is missing the target table"),
-    };
-
-    TomlConfig {
-        target: target.clone(),
-        target_arch: if target.contains("arm") {
-            ArchHint::ARM
-        } else if target.contains("aarch64") {
-            ArchHint::ARMV8
-        } else if target.contains("x86") {
-            ArchHint::X86
-        } else {
-            fail("fel4.toml target is not supported");
+    // TODO - expand here when we add more supported platforms/targets in fel4-config
+    // or move more of this include knowledge to fel4-config (painful)
+    match &fel4.target {
+        &SupportedTarget::X8664Sel4Fel4 => {
+            BindgenHeaderIncludeConfig {
+                kernel_arch: String::from("x86"),
+                kernel_sel4_arch: String::from("x86_64"),
+                width: String::from("64"),
+                platform: fel4.platform.full_name().to_string(),
+            }
         },
-        platform: platform.clone(),
-        cmake_target_config: target_config.clone(),
-        cmake_profile_config: match target_config.get(&build_profile) {
-            Some(t) => t.clone(),
-            None => fail("fel4.toml is missing build profile table"),
-        },
-        cmake_platform_config: match target_config.get(&platform) {
-            Some(t) => t.clone(),
-            None => fail("fel4.toml is missing target platform table"),
+        t @ &SupportedTarget::ArmSel4Fel4 => {
+            // TODO - add more mappings as platform options expand
+            //"exynos5410" => "exynos5",
+            //"exynos5422" => "exynos5",
+            //"exynos5250" => "exynos5",
+            //"imx7sabre" => "imx7",
+            //"rpi3" => "bcm2837",
+
+            // Platform names don't always match the associated sub-directory used for header includes
+            // so a mapping is necessary
+            let plat_include_dir = match &fel4.platform {
+                p @ &SupportedPlatform::PC99 => {
+                    panic!("{} target is not supported in combination with {} platform", t.full_name(), p.full_name())
+                },
+                &SupportedPlatform::Sabre => { "imx6"},
+            };
+            BindgenHeaderIncludeConfig {
+                kernel_arch: String::from("arm"),
+                kernel_sel4_arch: String::from("aarch32"),
+                width: String::from("32"),
+                platform: plat_include_dir.to_string(),
+            }
         },
     }
 }
+
+
 
 /// Return an environment variable as a String.
 fn getenv_unwrap(v: &str) -> String {
