@@ -55,3 +55,8 @@ RUST_TARGET_PATH=$PWD/test_configs FEL4_MANIFEST_PATH=$PWD/test_configs/fel4.tom
 
 If environment variable `FEL4_ARTIFACT_PATH` is set, the kernel and simulation script
 will be copied into the directory specified by the variable.
+
+## License
+
+This project is released under the MIT license. See the [dependencies README](deps/README.md)
+for more details.
