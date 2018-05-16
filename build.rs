@@ -133,7 +133,7 @@ fn print_cargo_rerun_if_flags() {
 /// artifact directory.
 fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
     if !output_path.exists() {
-        fs::create_dir(&output_path).unwrap();
+        fs::create_dir_all(&output_path).unwrap();
     }
 
     fs::copy(
