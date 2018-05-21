@@ -1,14 +1,21 @@
 # libsel4-sys
 
-Builds the sel4 kernel and generates bindings around it,
+Builds the sel4 kernel and generates Rust bindings around it,
 as configured by a fel4 manifest.
+
+This library provides thin Rust bindings around the [seL4 codebase](https://github.com/seL4/seL4);
+more idiomatic Rust wrappers for the enclosed functionality will be supplied in other crates.
+
+Intended for use in projects managed by
+[cargo fel4](https://github.com/PolySync/cargo-fel4), see that repository
+for introductory materials.
 
 ## Project Layout
 
 ```
 libsel4-sys/
 ├── Cargo.toml
-├── build.rs                <-- Pulls in fel4 toml for CMake configuration
+├── build.rs                <-- Configures CMake with fel4 manifest data, runs CMake and bindgen
 ├── CMakeLists.txt
 ├── deps                    <-- submodules to seL4 repositories
 │   ├── musllibc
@@ -17,28 +24,22 @@ libsel4-sys/
 │   ├── seL4_tools
 │   └── util_libs
 ├── package
-│   └── CMakeLists.txt      <-- custom CMake script to build seL4 artifacts
+│   └── CMakeLists.txt      <-- custom CMake script wrapper to build seL4 artifacts
 ├── README.md
 ├── res
 │   └── bindgen_wrapper.h
 ├── src
-│   └── lib.rs
+│   └── lib.rs              <-- thin wrapper around the generated bindings
 └── Xargo.toml
 ```
-
-## Down-stream Configuration
-
-Down-stream consumers can specify a toml file that contains the CMake configuration
-tables via the `FEL4_MANIFEST_PATH` variable.
 
 ## Building
 
 Don't forget to run `git submodule update --init` to pull in the seL4 related dependencies
-before you start hacking.
+to the local filesystem before attempting a build.
 
 This project is intended to be built in the context of the `cargo fel4` command, which manages
 the piping of key environment variables relevant to the downstream project.
-
 
 Builds require that the `FEL4_MANIFEST_PATH` environment variable is set and
 includes a path that points to a valid fel4.toml file, as specified by the `fel4-config`
@@ -52,6 +53,11 @@ RUST_TARGET_PATH=$PWD/test_configs FEL4_MANIFEST_PATH=$PWD/test_configs/fel4.tom
 ```
 
 ## Output Artifacts
+
+The generated bindings should be treated as relatively ephemeral and dynamic compared
+to most Rust libraries. The output is context-specific to the target (e.g. "arm-sel4-fel4")
+and the set of configuration
+flags derived from the input fel4 manifest file.
 
 If environment variable `FEL4_ARTIFACT_PATH` is set, the kernel and simulation script
 will be copied into the directory specified by the variable.
