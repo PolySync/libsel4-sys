@@ -55,7 +55,7 @@ RUST_TARGET_PATH=$PWD/test_configs FEL4_MANIFEST_PATH=$PWD/test_configs/fel4.tom
 ## Output Artifacts
 
 The generated bindings should be treated as relatively ephemeral and dynamic compared
-to most Rust libraries. The output is context-specific to the target (e.g. "arm-sel4-fel4")
+to most Rust libraries. The output is context-specific to the target (e.g. "armv7-sel4-fel4")
 and the set of configuration
 flags derived from the input fel4 manifest file.
 

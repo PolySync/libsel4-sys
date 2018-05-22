@@ -165,7 +165,7 @@ fn copy_artifacts(artifact_path: PathBuf, output_path: PathBuf) {
 fn generate_bindings(fel4: &Fel4Config, include_path: PathBuf) {
     let bindgen_include_config = get_bindgen_include_config(fel4);
 
-    let target_args = if fel4.target == SupportedTarget::ArmSel4Fel4 {
+    let target_args = if fel4.target == SupportedTarget::Armv7Sel4Fel4 {
         String::from("-mfloat-abi=hard")
     } else {
         String::from("")
@@ -219,7 +219,7 @@ fn get_bindgen_include_config(
                 platform: fel4.platform.full_name().to_string(),
             }
         },
-        t @ &SupportedTarget::ArmSel4Fel4 => {
+        t @ &SupportedTarget::Armv7Sel4Fel4 => {
             // TODO - add more mappings as platform options expand
             //"exynos5410" => "exynos5",
             //"exynos5422" => "exynos5",

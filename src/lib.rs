@@ -80,7 +80,7 @@ pub unsafe extern "C" fn strcpy(
 /// #define seL4_WordBits (sizeof(seL4_Word) * 8)
 /// ```
 ///
-/// For our `arm-sel4-fel4` target see file:
+/// For our `armv7-sel4-fel4` target see file:
 /// `libsel4/sel4_arch_include/aarch32/sel4/sel4_arch/constants.h`
 ///
 /// However due to bindgen not being able to expand functional
