@@ -1,5 +1,5 @@
-# rules for glueing together the packaging of the kernel and C bindings
-# TODO - a proper rework is needed
+# CMake rules for glueing together the packaging
+# of the seL4 kernel and C bindings
 
 cmake_minimum_required(VERSION 3.7.2)
 
@@ -15,6 +15,12 @@ set(rootservername sel4_package)
 
 add_library(sel4_package ALIAS sel4)
 
+# The current elfloader-tool CMakeList.txt doesn't set `-mgeneral-regs-only` for some reasone
+# So we construct the base compile options for it here, `-ffreestanding` is required with it
+if(KernelArchARM AND KernelSel4ArchAarch64 AND KernelPlatformTx1)
+    set_property(TARGET elfloader PROPERTY COMPILE_OPTIONS "-ffreestanding;-mgeneral-regs-only")
+endif()
+
 ApplyData61ElfLoaderSettings()
 
 if(BuildWithCommonSimulationSettings)
@@ -22,10 +28,10 @@ if(BuildWithCommonSimulationSettings)
     GenerateSimulateScript()
 endif(BuildWithCommonSimulationSettings)
 
-# disable GC sections as it causes binaries to be stripped sometimes
+# Disable GC sections as it causes binaries to be stripped sometimes
 set(UserLinkerGCSections OFF CACHE BOOL "" FORCE)
 
-# doing this to mimick what DeclareRootserver() would do
+# This to mimick what DeclareRootserver() would do
 set(
     IMAGE_NAME
     "${CMAKE_BINARY_DIR}/images/feL4img")
@@ -92,13 +98,13 @@ elseif("${KernelArch}" STREQUAL "arm")
     set_property(TARGET rootserver_image PROPERTY ROOTSERVER_IMAGE "$ENV{FEL4_ROOT_TASK_IMAGE_PATH}")
 endif()
 
-# get the basename of FEL4_ARTIFACT_PATH
+# Get the basename of FEL4_ARTIFACT_PATH
 get_filename_component(
     FEL4_ARTIFACT_BASENAME
     "$ENV{FEL4_ARTIFACT_PATH}"
     NAME)
 
-# mock the rootserver_image properties used by the simulate script building mechanism
+# Mock the rootserver_image properties used by the simulate script building mechanism
 set_property(TARGET rootserver_image PROPERTY IMAGE_NAME "${FEL4_ARTIFACT_BASENAME}/feL4img")
 set_property(TARGET rootserver_image PROPERTY KERNEL_IMAGE_NAME "${FEL4_ARTIFACT_BASENAME}/kernel")
 
