@@ -14,7 +14,6 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-
 struct BindgenHeaderIncludeConfig {
     kernel_arch: String,
     kernel_sel4_arch: String,
@@ -23,17 +22,30 @@ struct BindgenHeaderIncludeConfig {
 }
 
 fn main() {
-    // Resolve fel4 configuration from the manifest located via FEL4_MANIFEST_PATH and PROFILE env-vars
-    let (fel4_manifest_path, build_profile ) = match fel4_config::infer_manifest_location_from_env() {
+    // Resolve fel4 configuration from the manifest located via FEL4_MANIFEST_PATH
+    // and PROFILE env-vars
+    let (fel4_manifest_path, build_profile) = match fel4_config::infer_manifest_location_from_env()
+    {
         Ok(p) => p,
-        Err(e) => panic!("libsel4-sys build.rs had trouble figuring out where to pull fel4 config from. {}", e),
+        Err(e) => panic!(
+            "libsel4-sys build.rs had trouble figuring out where to pull fel4 config from. {}",
+            e
+        ),
     };
     println!("cargo:rerun-if-changed={}", fel4_manifest_path.display());
     let fel4 = match fel4_config::get_fel4_config(&fel4_manifest_path, &build_profile) {
         Ok(f) => f,
-        Err(e) => { panic!("libsel4-sys build.rs ran into trouble with the fel4 manifest found at {:?}. {}", &fel4_manifest_path, e) },
+        Err(e) => panic!(
+            "libsel4-sys build.rs ran into trouble with the fel4 manifest found at {:?}. {}",
+            &fel4_manifest_path, e
+        ),
     };
-    println!("cargo:rerun-if-changed={}", fs::canonicalize(&fel4_manifest_path).expect("Could not canonicalize the fel4 manifest path").display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        fs::canonicalize(&fel4_manifest_path)
+            .expect("Could not canonicalize the fel4 manifest path")
+            .display()
+    );
 
     // Configure the CMake build using the data resolved from the fel4 manifest
     let mut cmake_build_config = CmakeConfig::new(".");
@@ -42,32 +54,29 @@ fn main() {
         Err(e) => { panic!("libsel4-sys build.rs ran into trouble configuring the sel4 kernel CMake build when using the fel4 manifest from {:?}. {}", &fel4_manifest_path, e) },
     };
 
-    // delete any existing CMakeCache.txt to prevent seL4/CMake from
+    // Delete any existing CMakeCache.txt to prevent seL4/CMake from
     // unexpected reconfigurations
     let prev_cache_path = PathBuf::from(getenv_unwrap("OUT_DIR"))
         .join("build")
         .join("CMakeCache.txt");
 
     if prev_cache_path.exists() {
-        fs::remove_file(prev_cache_path)
-            .expect("failed to delete previous CMakeCache.txt file");
+        fs::remove_file(prev_cache_path).expect("failed to delete previous CMakeCache.txt file");
     }
 
-    // perform the cmake build
+    // Perform the cmake build
     let cargo_output_path = cmake_build_config.build();
 
-    generate_bindings(
-        &fel4,
-        cargo_output_path.join("build").join("staging"),
-    );
+    generate_bindings(&fel4, cargo_output_path.join("build").join("staging"));
 
-    // links = "sel4", these non-cargo variables can be read by consumer
+    // Our links key is "sel4"
+    // These non-cargo variables can be read by consumer
     // packages
     print_cargo_links_keys(cargo_output_path.clone());
 
     print_cargo_rerun_if_flags();
 
-    // copy artifacts if environment variable is set
+    // Copy artifacts if environment variable is set
     let dest_env = env::var("FEL4_ARTIFACT_PATH");
     match dest_env {
         Ok(p) => copy_artifacts(cargo_output_path.clone(), PathBuf::from(p)),
@@ -79,7 +88,7 @@ fn main() {
         cargo_output_path.display()
     );
 
-    // native libsel4.a location
+    // Native libsel4.a location
     println!(
         "cargo:rustc-link-search=native={}",
         cargo_output_path.join("build").join("libsel4").display()
@@ -176,9 +185,9 @@ fn generate_bindings(fel4: &Fel4Config, include_path: PathBuf) {
         .whitelist_recursively(true)
         .no_copy("*")
         .use_core()
-        // our custom c_types
+        // Our custom c_types
         .ctypes_prefix("c_types")
-        // TODO - verify that we should be implementing these in src/lib.rs
+        // These are implemented by this crate
         .blacklist_type("strcpy")
         .blacklist_type("__assert_fail")
         .clang_arg(target_args)
@@ -194,9 +203,7 @@ fn generate_bindings(fel4: &Fel4Config, include_path: PathBuf) {
         .expect("failed to generate bindings");
 
     bindings
-        .write_to_file(
-            PathBuf::from(getenv_unwrap("OUT_DIR")).join("bindings.rs"),
-        )
+        .write_to_file(PathBuf::from(getenv_unwrap("OUT_DIR")).join("bindings.rs"))
         .expect("failed to write bindings to file");
 }
 
@@ -205,19 +212,16 @@ fn generate_bindings(fel4: &Fel4Config, include_path: PathBuf) {
 /// token Strings.
 ///
 /// Returns a BindgenHeaderIncludeConfig.
-fn get_bindgen_include_config(
-    fel4: &Fel4Config,
-) -> BindgenHeaderIncludeConfig {
-    // TODO - expand here when we add more supported platforms/targets in fel4-config
-    // or move more of this include knowledge to fel4-config (painful)
+fn get_bindgen_include_config(fel4: &Fel4Config) -> BindgenHeaderIncludeConfig {
+    // TODO - expand here when we add more supported platforms/targets in
+    // fel4-config or move more of this include knowledge to fel4-config
+    // (painful)
     match &fel4.target {
-        &SupportedTarget::X8664Sel4Fel4 => {
-            BindgenHeaderIncludeConfig {
-                kernel_arch: String::from("x86"),
-                kernel_sel4_arch: String::from("x86_64"),
-                width: String::from("64"),
-                platform: fel4.platform.full_name().to_string(),
-            }
+        &SupportedTarget::X8664Sel4Fel4 => BindgenHeaderIncludeConfig {
+            kernel_arch: String::from("x86"),
+            kernel_sel4_arch: String::from("x86_64"),
+            width: String::from("64"),
+            platform: fel4.platform.full_name().to_string(),
         },
         t @ &SupportedTarget::Armv7Sel4Fel4 => {
             // TODO - add more mappings as platform options expand
@@ -227,13 +231,20 @@ fn get_bindgen_include_config(
             //"imx7sabre" => "imx7",
             //"rpi3" => "bcm2837",
 
-            // Platform names don't always match the associated sub-directory used for header includes
-            // so a mapping is necessary
+            // Platform names don't always match the associated sub-directory used for
+            // header includes so a mapping is necessary
             let plat_include_dir = match &fel4.platform {
-                p @ &SupportedPlatform::PC99 => {
-                    panic!("{} target is not supported in combination with {} platform", t.full_name(), p.full_name())
-                },
-                &SupportedPlatform::Sabre => { "imx6"},
+                p @ &SupportedPlatform::PC99 => panic!(
+                    "{} target is not supported in combination with {} platform",
+                    t.full_name(),
+                    p.full_name()
+                ),
+                p @ &SupportedPlatform::Tx1 => panic!(
+                    "{} target is not supported in combination with {} platform",
+                    t.full_name(),
+                    p.full_name()
+                ),
+                &SupportedPlatform::Sabre => "imx6",
             };
             BindgenHeaderIncludeConfig {
                 kernel_arch: String::from("arm"),
@@ -241,11 +252,15 @@ fn get_bindgen_include_config(
                 width: String::from("32"),
                 platform: plat_include_dir.to_string(),
             }
+        }
+        &SupportedTarget::Aarch64Sel4Fel4 => BindgenHeaderIncludeConfig {
+            kernel_arch: String::from("arm"),
+            kernel_sel4_arch: String::from("aarch64"),
+            width: String::from("64"),
+            platform: fel4.platform.full_name().to_string(),
         },
     }
 }
-
-
 
 /// Return an environment variable as a String.
 fn getenv_unwrap(v: &str) -> String {
