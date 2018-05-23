@@ -3,7 +3,7 @@
 ## Overview
 
 Builds the sel4 kernel and generates Rust bindings around it,
-as configured by a fel4 manifest.
+as configured by a feL4 manifest.
 
 This library provides thin Rust bindings around the [seL4 codebase](https://github.com/seL4/seL4);
 more idiomatic Rust wrappers for the enclosed functionality will be supplied in other crates.
@@ -18,7 +18,7 @@ for introductory materials.
 ```
 libsel4-sys/
 ├── Cargo.toml
-├── build.rs                <-- Configures CMake with fel4 manifest data, runs CMake and bindgen
+├── build.rs                <-- Configures CMake with feL4 manifest data, runs CMake and bindgen
 ├── CMakeLists.txt
 ├── deps                    <-- submodules to seL4 repositories
 │   ├── musllibc
@@ -80,7 +80,7 @@ $ sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
 This project is intended to be built in the context of the `cargo fel4` command, which manages
 the piping of key environment variables relevant to the downstream project.
 
-See the [cargo fel4 repository]https://github.com/PolySync/cargo-fel4() for more direction, but the general idea is to create
+See the [cargo-fel4 repository](https://github.com/PolySync/cargo-fel4) for more direction, but the general idea is to create
 a Rust project with `libsel4-sys` as a dependency, add a fel4.toml file, and to run `cargo fel4 build`.
 
 While not recommended for general use, manual builds are possible.
@@ -110,7 +110,7 @@ will be copied into the directory specified by the variable.
 
 The generated bindings should be treated as relatively ephemeral and dynamic compared
 to most Rust libraries. The output is context-specific to the target (e.g. "armv7-sel4-fel4")
-and the set of configuration flags derived from the input fel4 manifest file.
+and the set of configuration flags derived from the input feL4 manifest file.
 
 See the Rust docs for a surface-level overview of the raw APIs exposed.
 
