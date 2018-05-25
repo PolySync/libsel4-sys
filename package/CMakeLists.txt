@@ -15,7 +15,7 @@ set(rootservername sel4_package)
 
 add_library(sel4_package ALIAS sel4)
 
-# The current elfloader-tool CMakeList.txt doesn't set `-mgeneral-regs-only` for some reasone
+# The current elfloader-tool CMakeList.txt doesn't set `-mgeneral-regs-only` for some reason
 # So we construct the base compile options for it here, `-ffreestanding` is required with it
 if(KernelArchARM AND KernelSel4ArchAarch64 AND KernelPlatformTx1)
     set_property(TARGET elfloader PROPERTY COMPILE_OPTIONS "-ffreestanding;-mgeneral-regs-only")
@@ -31,7 +31,7 @@ endif(BuildWithCommonSimulationSettings)
 # Disable GC sections as it causes binaries to be stripped sometimes
 set(UserLinkerGCSections OFF CACHE BOOL "" FORCE)
 
-# This to mimick what DeclareRootserver() would do
+# This mimicks what DeclareRootserver() would do
 set(
     IMAGE_NAME
     "${CMAKE_BINARY_DIR}/images/feL4img")
