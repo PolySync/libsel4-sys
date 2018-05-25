@@ -13,7 +13,6 @@ KernelFastpath = true
 LibSel4FunctionAttributes = "public"
 KernelNumDomains = 1
 HardwareDebugAPI = false
-KernelColourPrinting = true
 KernelFWholeProgram = false
 KernelResetChunkBits = 8
 LibSel4DebugAllocBufferEntries = 0
@@ -22,7 +21,6 @@ KernelNumPriorities = 256
 KernelStackBits = 12
 KernelTimeSlice = 5
 KernelTimerTickMS = 2
-KernelUserStackTraceLength = 16
 # the following keys are specific to x86_64-sel4-fel4 targets
 KernelArch = "x86"
 KernelX86Sel4Arch = "x86_64"
@@ -65,6 +63,8 @@ LibPlatSupportX86ConsoleDevice = "com1"
 [x86_64-sel4-fel4.debug]
 KernelDebugBuild = true
 KernelPrinting = true
+KernelColourPrinting = true
+KernelUserStackTraceLength = 16
 
 [x86_64-sel4-fel4.release]
 KernelDebugBuild = false
@@ -79,7 +79,6 @@ KernelFastpath = true
 LibSel4FunctionAttributes = "public"
 KernelNumDomains = 1
 HardwareDebugAPI = false
-KernelColourPrinting = true
 KernelFWholeProgram = false
 KernelResetChunkBits = 8
 LibSel4DebugAllocBufferEntries = 0
@@ -88,7 +87,6 @@ KernelNumPriorities = 256
 KernelStackBits = 12
 KernelTimeSlice = 5
 KernelTimerTickMS = 2
-KernelUserStackTraceLength = 16
 # the following keys are specific to armv7-sel4-fel4 targets
 KernelArch = "arm"
 KernelArmSel4Arch = "aarch32"
@@ -107,6 +105,8 @@ UserLinkerGCSections = false
 [armv7-sel4-fel4.debug]
 KernelDebugBuild = true
 KernelPrinting = true
+KernelColourPrinting = true
+KernelUserStackTraceLength = 16
 
 [armv7-sel4-fel4.release]
 KernelDebugBuild = false
@@ -130,7 +130,6 @@ KernelFastpath = true
 LibSel4FunctionAttributes = "public"
 KernelNumDomains = 1
 HardwareDebugAPI = false
-KernelColourPrinting = true
 KernelFWholeProgram = false
 KernelResetChunkBits = 8
 LibSel4DebugAllocBufferEntries = 0
@@ -139,7 +138,6 @@ KernelNumPriorities = 256
 KernelStackBits = 12
 KernelTimeSlice = 5
 KernelTimerTickMS = 2
-KernelUserStackTraceLength = 16
 # the following keys are specific to aarch64-sel4-fel4 targets
 KernelArch = "arm"
 KernelArmSel4Arch = "aarch64"
@@ -157,6 +155,8 @@ UserLinkerGCSections = false
 [aarch64-sel4-fel4.debug]
 KernelDebugBuild = true
 KernelPrinting = true
+KernelColourPrinting = true
+KernelUserStackTraceLength = 16
 
 [aarch64-sel4-fel4.release]
 KernelDebugBuild = false
