@@ -1,3 +1,7 @@
+# Dependencies
+
+# License
+
 Note that the libsel4-sys project itself is licensed under MIT,
 and makes use of seL4 through the BSD 2-Clause license.
 
