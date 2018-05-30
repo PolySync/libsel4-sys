@@ -168,7 +168,10 @@ build and installation.
 Once `cargo-fel4` and the `libsel4-sys` dependencies are installed, you should be able to run:
 
 ```bash
-cargo fel4 new tests && cd tests && cargo fel4 test build && cargo fel4 test simulate
+cargo fel4 new tests
+cd tests
+cargo fel4 test build
+cargo fel4 test simulate
 ```
 
 # License
