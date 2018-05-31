@@ -1,6 +1,6 @@
 [package]
 name = "libsel4-sys"
-version = "0.0.1"
+version = "0.5.0"
 publish = false
 build = "build.rs"
 links = "sel4"
